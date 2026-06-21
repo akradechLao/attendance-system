@@ -1,65 +1,121 @@
-import Image from "next/image";
+import { getAllEmployees, getTodayAttendance, getSundayMissingAfternoon, getSaturdayShiftCount } from "@/lib/actions";
+import { getUpcomingLeaves } from "@/lib/leave-actions";
+import { getSaturdayDate, isTodaySunday } from "@/lib/business-rules";
+import StatCard from "@/components/StatCard";
+import AttendanceTable from "@/components/AttendanceTable";
+import LeaveCard from "@/components/LeaveCard";
 
-export default function Home() {
+export default async function HRDashboard() {
+  const [employees, todayAttendance, sundayMissing, satCount, upcomingLeaves] = await Promise.all([
+    getAllEmployees(),
+    getTodayAttendance(),
+    getSundayMissingAfternoon(),
+    getSaturdayShiftCount(getSaturdayDate()),
+    getUpcomingLeaves(),
+  ]);
+
+  const lateCount = todayAttendance.filter((r) => r.status === "late").length;
+  const checkedInCount = todayAttendance.length;
+  const notCheckedIn = employees.length - checkedInCount;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-8">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-1.5 gradient-gold rounded-full" />
+        <div>
+          <h1 className="text-2xl font-bold text-navy">แดชบอร์ด HR</h1>
+          <p className="mt-0.5 text-sm text-navy/50">ภาพรวมการเข้างานของพนักงาน</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="พนักงานทั้งหมด"
+          value={employees.length}
+          icon="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+          color="navy"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+        <StatCard
+          title="เข้างานแล้ววันนี้"
+          value={checkedInCount}
+          subtitle={notCheckedIn > 0 ? `ยังไม่เช็คอิน ${notCheckedIn} คน` : "ครบทุกคน"}
+          icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          color="green"
+        />
+        <StatCard
+          title="สายวันนี้"
+          value={lateCount}
+          icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+          color="red"
+        />
+        <StatCard
+          title="เวรวันเสาร์"
+          value={satCount}
+          subtitle={satCount < 3 ? `ต้องการอย่างน้อย 3 คน` : "ครบแล้ว"}
+          icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          color={satCount < 3 ? "red" : "gold"}
+        />
+      </div>
+
+      <AttendanceTable records={todayAttendance} title="สรุปการเข้างานวันนี้" />
+
+      <LeaveCard leaves={upcomingLeaves} title="ลางานล่วงหน้า 7 วัน" />
+
+      {satCount < 3 && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-red-800">แจ้งเตือนเวรวันเสาร์</h3>
+          <p className="mt-2 text-red-700">
+            มีพนักงานเข้าเวรวันเสาร์เพียง <span className="font-bold">{satCount}</span> คน
+            ต้องการอย่างน้อย 3 คน!
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      )}
+
+      {isTodaySunday() && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-red-800">
+            แจ้งเตือน - ขาดการเช็คอินช่วงบ่ายวันอาทิตย์
+          </h3>
+          {sundayMissing.length === 0 ? (
+            <p className="mt-2 text-red-700">ไม่มีข้อมูลการเช็คอินช่วงบ่ายวันอาทิตย์</p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {sundayMissing.map((record) => (
+                <div
+                  key={record.id}
+                  className="flex items-center gap-2 text-red-700"
+                >
+                  <span className="font-bold text-red-600">
+                    {record.employee.name}
+                  </span>
+                  <span>(กลุ่ม {record.employee.groupType})</span>
+                  <span>-</span>
+                  <span>เช็คอินเวลา {record.checkIn}</span>
+                  <span className="font-medium">แต่ยังไม่เช็คอินช่วงบ่ายหลัง 13:00</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </main>
+      )}
+
+      {lateCount > 0 && (
+        <div className="rounded-xl border border-gold/30 bg-gold/5 p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gold-dark">พนักงานสายวันนี้</h3>
+          <div className="mt-3 space-y-2">
+            {todayAttendance
+              .filter((r) => r.status === "late")
+              .map((record) => (
+                <div key={record.id} className="flex items-center gap-2 text-navy/70">
+                  <span className="font-bold text-navy">{record.employee.name}</span>
+                  <span className="text-navy/50">(กลุ่ม {record.employee.groupType})</span>
+                  <span className="text-navy/30">-</span>
+                  <span>เช็คอินเวลา {record.checkIn}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

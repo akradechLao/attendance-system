@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum GroupType {
+  A
+  B
+}
+
+enum AttendanceStatus {
+  late
+  on_time
+}
+
+enum ShiftType {
+  normal
+  ot
+  saturday
+  sunday
+}
+
+model Employee {
+  id                Int       @id @default(autoincrement())
+  name              String
+  groupType         GroupType @map("group_type")
+  wfhQuota          Int       @default(0) @map("wfh_quota")
+  preferredOffDay   String?   @map("preferred_off_day")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  attendanceLogs    AttendanceLog[]
+  shiftSchedules    ShiftSchedule[]
+  leaveRequests     LeaveRequest[]
+
+  @@map("employees")
+}
+
+model AttendanceLog {
+  id            Int               @id @default(autoincrement())
+  empId         Int               @map("emp_id")
+  checkIn       String?           @map("check_in")
+  checkInPhoto  String?           @db.Text @map("check_in_photo")
+  checkOut      String?           @map("check_out")
+  checkOutPhoto String?           @db.Text @map("check_out_photo")
+  status        AttendanceStatus?
+  latLong       String?           @map("lat_long")
+  date          String
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [empId], references: [id])
+
+  @@unique([empId, date])
+  @@map("attendance_logs")
+}
+
+model ShiftSchedule {
+  id        Int      @id @default(autoincrement())
+  empId     Int      @map("emp_id")
+  workDate  String   @map("work_date")
+  shiftType ShiftType @default(normal) @map("shift_type")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [empId], references: [id])
+
+  @@unique([empId, workDate])
+  @@map("shift_schedules")
+}
+
+model LeaveRequest {
+  id        Int      @id @default(autoincrement())
+  empId     Int      @map("emp_id")
+  leaveType String   @map("leave_type")
+  startDate String   @map("start_date")
+  endDate   String   @map("end_date")
+  reason    String
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [empId], references: [id])
+
+  @@map("leave_requests")
+}
