@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getAllEmployees, getTodayAttendance, getSundayMissingAfternoon, getSaturdayShiftCount } from "@/lib/actions";
 import { getUpcomingLeaves } from "@/lib/leave-actions";
 import { getSaturdayDate, isTodaySunday } from "@/lib/business-rules";
