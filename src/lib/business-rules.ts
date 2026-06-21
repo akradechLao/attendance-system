@@ -44,24 +44,28 @@ export function formatTime(time: string): string {
   return time.substring(0, 5);
 }
 
+function getThaiTime() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+}
+
 export function isTodaySunday(): boolean {
-  return new Date().getDay() === 0;
+  return getThaiTime().getDay() === 0;
 }
 
 export function isTodaySaturday(): boolean {
-  return new Date().getDay() === 6;
+  return getThaiTime().getDay() === 6;
 }
 
 export function getSundayDate(): string {
-  const today = new Date();
-  return today.toISOString().split("T")[0];
+  const today = getThaiTime();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
 export function getSaturdayDate(): string {
-  const today = new Date();
+  const today = getThaiTime();
   const day = today.getDay();
   const diff = day === 6 ? 0 : 6 - day;
   const saturday = new Date(today);
   saturday.setDate(today.getDate() + diff);
-  return saturday.toISOString().split("T")[0];
+  return `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, "0")}-${String(saturday.getDate()).padStart(2, "0")}`;
 }

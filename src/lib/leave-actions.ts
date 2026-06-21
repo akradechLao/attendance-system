@@ -65,11 +65,16 @@ export async function getAllLeaves(): Promise<LeaveRecord[]> {
   }));
 }
 
+function getThaiTime() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+}
+
 export async function getUpcomingLeaves(): Promise<LeaveRecord[]> {
-  const today = new Date().toISOString().split("T")[0];
-  const weekLater = new Date();
-  weekLater.setDate(weekLater.getDate() + 7);
-  const weekLaterStr = weekLater.toISOString().split("T")[0];
+  const now = getThaiTime();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const weekLater = new Date(now);
+  weekLater.setDate(now.getDate() + 7);
+  const weekLaterStr = `${weekLater.getFullYear()}-${String(weekLater.getMonth() + 1).padStart(2, "0")}-${String(weekLater.getDate()).padStart(2, "0")}`;
 
   const records = await prisma.leaveRequest.findMany({
     where: {

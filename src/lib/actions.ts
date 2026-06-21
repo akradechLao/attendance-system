@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { getStatus, isTodaySunday } from "@/lib/business-rules";
 import { revalidatePath } from "next/cache";
 
+function getThaiTime() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+}
+
 export interface CheckInResult {
   success: boolean;
   message: string;
@@ -41,8 +45,8 @@ export async function checkIn(
       return { success: false, message: "ไม่พบพนักงาน" };
     }
 
-    const today = new Date().toISOString().split("T")[0];
-    const now = new Date();
+    const now = getThaiTime();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const checkInTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
     const status = getStatus(checkInTime, employee.groupType);
 
@@ -87,8 +91,8 @@ export async function checkOut(
   photoUrl?: string
 ): Promise<CheckOutResult> {
   try {
-    const today = new Date().toISOString().split("T")[0];
-    const now = new Date();
+    const now = getThaiTime();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const checkOutTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
     const existing = await prisma.attendanceLog.findUnique({
@@ -123,7 +127,8 @@ export async function checkOut(
 }
 
 export async function getTodayAttendance() {
-  const today = new Date().toISOString().split("T")[0];
+  const now = getThaiTime();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   return prisma.attendanceLog.findMany({
     where: { date: today },
     include: { employee: true },
@@ -148,7 +153,8 @@ export async function getAllEmployees() {
 export async function getSundayMissingAfternoon() {
   if (!isTodaySunday()) return [];
 
-  const today = new Date().toISOString().split("T")[0];
+  const now = getThaiTime();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const records = await prisma.attendanceLog.findMany({
     where: {
       date: today,
