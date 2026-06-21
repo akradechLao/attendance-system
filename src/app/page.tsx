@@ -1,5 +1,6 @@
-export const dynamic = "force-dynamic";
+"use client";
 
+import { useState, useEffect } from "react";
 import { getAllEmployees, getTodayAttendance, getSundayMissingAfternoon, getSaturdayShiftCount } from "@/lib/actions";
 import { getUpcomingLeaves } from "@/lib/leave-actions";
 import { getSaturdayDate, isTodaySunday } from "@/lib/business-rules";
@@ -7,25 +8,89 @@ import StatCard from "@/components/StatCard";
 import AttendanceTable from "@/components/AttendanceTable";
 import LeaveCard from "@/components/LeaveCard";
 
-export default async function HRDashboard() {
-  let employees: { id: number; name: string; groupType: string }[] = [];
-  let todayAttendance: { id: number; checkIn: string | null; checkOut: string | null; checkInPhoto: string | null; checkOutPhoto: string | null; status: string | null; latLong: string | null; date: string; employee: { id: number; name: string; groupType: string } }[] = [];
-  let sundayMissing: { id: number; checkIn: string | null; employee: { name: string; groupType: string } }[] = [];
-  let satCount = 0;
-  let upcomingLeaves: { id: number; empId: number; leaveType: string; startDate: string; endDate: string; reason: string; status: string; createdAt: Date; employee: { id: number; name: string; groupType: string } }[] = [];
-  let dbError = false;
+interface Employee {
+  id: number;
+  name: string;
+  groupType: "A" | "B";
+  wfhQuota: number;
+}
 
-  try {
-    [employees, todayAttendance, sundayMissing, satCount, upcomingLeaves] = await Promise.all([
-      getAllEmployees(),
-      getTodayAttendance(),
-      getSundayMissingAfternoon(),
-      getSaturdayShiftCount(getSaturdayDate()),
-      getUpcomingLeaves(),
-    ]);
-  } catch (error) {
-    dbError = true;
-    console.error("Database connection error:", error);
+interface AttendanceRecord {
+  id: number;
+  checkIn: string | null;
+  checkInPhoto: string | null;
+  checkOut: string | null;
+  checkOutPhoto: string | null;
+  status: "late" | "on_time" | null;
+  latLong: string | null;
+  date: string;
+  employee: { id: number; name: string; groupType: "A" | "B" };
+}
+
+interface LeaveRecord {
+  id: number;
+  empId: number;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: string;
+  createdAt: Date;
+  employee: { id: number; name: string; groupType: string };
+}
+
+export default function HRDashboard() {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord[]>([]);
+  const [sundayMissing, setSundayMissing] = useState<AttendanceRecord[]>([]);
+  const [satCount, setSatCount] = useState(0);
+  const [upcomingLeaves, setUpcomingLeaves] = useState<LeaveRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [emps, attendance, missing, sat, leaves] = await Promise.all([
+          getAllEmployees(),
+          getTodayAttendance(),
+          getSundayMissingAfternoon(),
+          getSaturdayShiftCount(getSaturdayDate()),
+          getUpcomingLeaves(),
+        ]);
+        setEmployees(emps);
+        setTodayAttendance(attendance);
+        setSundayMissing(missing);
+        setSatCount(sat);
+        setUpcomingLeaves(leaves);
+      } catch (error) {
+        console.error("Database error:", error);
+        setDbError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-1.5 bg-gold/30 rounded-full" />
+          <div>
+            <div className="h-8 w-48 bg-cream-dark rounded" />
+            <div className="h-4 w-64 bg-cream-dark rounded mt-2" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 bg-cream-dark rounded-xl" />
+          ))}
+        </div>
+        <div className="h-64 bg-cream-dark rounded-xl" />
+      </div>
+    );
   }
 
   if (dbError) {
@@ -40,13 +105,13 @@ export default async function HRDashboard() {
         </div>
         <div className="rounded-xl border border-red-200 bg-red-50 p-8 shadow-sm">
           <h3 className="text-lg font-semibold text-red-800">ไม่สามารถเชื่อมต่อฐานข้อมูลได้</h3>
-          <p className="mt-2 text-red-700">กรุณาตรวจสอบ DATABASE_URL ใน Vercel Environment Variables</p>
+          <p className="mt-2 text-red-700">กรุณาตรวจสอบการตั้งค่า DATABASE_URL</p>
           <div className="mt-4 rounded-lg bg-white p-4 border border-red-200">
             <p className="text-sm font-medium text-red-800">ตรวจสอบ:</p>
             <ul className="mt-2 space-y-1 text-sm text-red-700">
               <li>1. สร้าง database ชื่อ <code className="bg-red-100 px-1 rounded">attendance_db</code> บน Neon แล้วหรือยัง</li>
               <li>2. DATABASE_URL ตั้งค่าถูกต้องใน Vercel แล้วหรือยัง</li>
-              <li>3. รัน <code className="bg-red-100 px-1 rounded">npx prisma db push</code> เพื่อสร้าง Tables แล้วหรือยัง</li>
+              <li>3. รัน <code className="bg-red-100 px-1 rounded">npx prisma db push</code> แล้วหรือยัง</li>
             </ul>
           </div>
         </div>
@@ -121,13 +186,8 @@ export default async function HRDashboard() {
           ) : (
             <div className="mt-3 space-y-2">
               {sundayMissing.map((record) => (
-                <div
-                  key={record.id}
-                  className="flex items-center gap-2 text-red-700"
-                >
-                  <span className="font-bold text-red-600">
-                    {record.employee.name}
-                  </span>
+                <div key={record.id} className="flex items-center gap-2 text-red-700">
+                  <span className="font-bold text-red-600">{record.employee.name}</span>
                   <span>(กลุ่ม {record.employee.groupType})</span>
                   <span>-</span>
                   <span>เช็คอินเวลา {record.checkIn}</span>
