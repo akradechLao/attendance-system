@@ -8,13 +8,51 @@ import AttendanceTable from "@/components/AttendanceTable";
 import LeaveCard from "@/components/LeaveCard";
 
 export default async function HRDashboard() {
-  const [employees, todayAttendance, sundayMissing, satCount, upcomingLeaves] = await Promise.all([
-    getAllEmployees(),
-    getTodayAttendance(),
-    getSundayMissingAfternoon(),
-    getSaturdayShiftCount(getSaturdayDate()),
-    getUpcomingLeaves(),
-  ]);
+  let employees: { id: number; name: string; groupType: string }[] = [];
+  let todayAttendance: { id: number; checkIn: string | null; checkOut: string | null; checkInPhoto: string | null; checkOutPhoto: string | null; status: string | null; latLong: string | null; date: string; employee: { id: number; name: string; groupType: string } }[] = [];
+  let sundayMissing: { id: number; checkIn: string | null; employee: { name: string; groupType: string } }[] = [];
+  let satCount = 0;
+  let upcomingLeaves: { id: number; empId: number; leaveType: string; startDate: string; endDate: string; reason: string; status: string; createdAt: Date; employee: { id: number; name: string; groupType: string } }[] = [];
+  let dbError = false;
+
+  try {
+    [employees, todayAttendance, sundayMissing, satCount, upcomingLeaves] = await Promise.all([
+      getAllEmployees(),
+      getTodayAttendance(),
+      getSundayMissingAfternoon(),
+      getSaturdayShiftCount(getSaturdayDate()),
+      getUpcomingLeaves(),
+    ]);
+  } catch (error) {
+    dbError = true;
+    console.error("Database connection error:", error);
+  }
+
+  if (dbError) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-1.5 gradient-gold rounded-full" />
+          <div>
+            <h1 className="text-2xl font-bold text-navy">แดชบอร์ด HR</h1>
+            <p className="mt-0.5 text-sm text-navy/50">ภาพรวมการเข้างานของพนักงาน</p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-8 shadow-sm">
+          <h3 className="text-lg font-semibold text-red-800">ไม่สามารถเชื่อมต่อฐานข้อมูลได้</h3>
+          <p className="mt-2 text-red-700">กรุณาตรวจสอบ DATABASE_URL ใน Vercel Environment Variables</p>
+          <div className="mt-4 rounded-lg bg-white p-4 border border-red-200">
+            <p className="text-sm font-medium text-red-800">ตรวจสอบ:</p>
+            <ul className="mt-2 space-y-1 text-sm text-red-700">
+              <li>1. สร้าง database ชื่อ <code className="bg-red-100 px-1 rounded">attendance_db</code> บน Neon แล้วหรือยัง</li>
+              <li>2. DATABASE_URL ตั้งค่าถูกต้องใน Vercel แล้วหรือยัง</li>
+              <li>3. รัน <code className="bg-red-100 px-1 rounded">npx prisma db push</code> เพื่อสร้าง Tables แล้วหรือยัง</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const lateCount = todayAttendance.filter((r) => r.status === "late").length;
   const checkedInCount = todayAttendance.length;
