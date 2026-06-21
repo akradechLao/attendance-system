@@ -156,9 +156,9 @@ export default function HRDashboard() {
         <StatCard
           title="เวรวันเสาร์"
           value={satCount}
-          subtitle={satCount < 3 ? `ต้องการอย่างน้อย 3 คน` : "ครบแล้ว"}
+          subtitle={satCount < 2 ? `ต้องการอย่างน้อย 2 คน` : "ครบแล้ว"}
           icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-          color={satCount < 3 ? "red" : "gold"}
+          color={satCount < 2 ? "red" : "gold"}
         />
       </div>
 
@@ -166,12 +166,12 @@ export default function HRDashboard() {
 
       <LeaveCard leaves={upcomingLeaves} title="ลางานล่วงหน้า 7 วัน" />
 
-      {satCount < 3 && (
+      {satCount < 2 && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-red-800">แจ้งเตือนเวรวันเสาร์</h3>
           <p className="mt-2 text-red-700">
             มีพนักงานเข้าเวรวันเสาร์เพียง <span className="font-bold">{satCount}</span> คน
-            ต้องการอย่างน้อย 3 คน!
+            ต้องการอย่างน้อย 2 คน!
           </p>
         </div>
       )}

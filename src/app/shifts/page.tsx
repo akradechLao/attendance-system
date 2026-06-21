@@ -200,9 +200,9 @@ export default function ShiftManagement() {
             </div>
           </div>
 
-          {satCount < 3 && (
+          {satCount < 2 && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              วันเสาร์ต้องมีอย่างน้อย 3 คน ปัจจุบัน: {satCount} คน
+              วันเสาร์ต้องมีอย่างน้อย 2 คน ปัจจุบัน: {satCount} คน
             </div>
           )}
 
