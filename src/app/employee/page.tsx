@@ -48,6 +48,12 @@ export default function EmployeePortal() {
     getTodayAttendance().then(setTodayRecords).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (showCamera && streamRef.current && videoRef.current && !videoRef.current.srcObject) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [showCamera]);
+
   const selectedEmployee = employees.find((e) => e.id === selectedEmpId);
 
   const startCamera = useCallback(async () => {
@@ -59,7 +65,6 @@ export default function EmployeePortal() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-      setShowCamera(true);
     } catch {
       setMessage({ type: "error", text: "ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง" });
     }
@@ -142,10 +147,11 @@ export default function EmployeePortal() {
     }
   };
 
-  const openConfirmDialog = async (action: "checkin" | "checkout") => {
+  const openConfirmDialog = (action: "checkin" | "checkout") => {
     setCapturedPhoto(null);
     setConfirmAction(action);
-    await startCamera();
+    setShowCamera(true);
+    startCamera();
   };
 
   const handleCancel = () => {
@@ -375,6 +381,7 @@ export default function EmployeePortal() {
                     <button
                       onClick={() => {
                         setCapturedPhoto(null);
+                        setShowCamera(true);
                         startCamera();
                       }}
                       className="mt-2 mx-auto flex items-center gap-1 text-xs text-navy/50 hover:text-navy transition-colors"
