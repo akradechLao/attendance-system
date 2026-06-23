@@ -1,8 +1,9 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getStatus, isTodaySunday } from "@/lib/business-rules";
+import { getStatus, isTodaySunday, checkLocation, parseLatLong } from "@/lib/business-rules";
 import { revalidatePath } from "next/cache";
+import { sendTelegramPhoto, sendTelegramMessage } from "@/lib/telegram";
 
 function getThaiTime() {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
@@ -11,6 +12,7 @@ function getThaiTime() {
 export interface CheckInResult {
   success: boolean;
   message: string;
+  distanceInfo?: string;
   data?: {
     id: number;
     checkIn: string;
@@ -23,12 +25,24 @@ export interface CheckInResult {
 export interface CheckOutResult {
   success: boolean;
   message: string;
+  distanceInfo?: string;
   data?: {
     id: number;
     checkOut: string;
     latLong: string;
     checkOutPhoto: string | null;
   };
+}
+
+async function getActiveOfficeLocation() {
+  return prisma.officeLocation.findFirst({
+    where: { isActive: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+function formatDistanceInfo(distanceMeters: number, officeName: string): string {
+  return `📍 อยู่ห่างจาก "${officeName}" ${distanceMeters} เมตร`;
 }
 
 export async function checkIn(
@@ -43,6 +57,31 @@ export async function checkIn(
 
     if (!employee) {
       return { success: false, message: "ไม่พบพนักงาน" };
+    }
+
+    const officeLocation = await getActiveOfficeLocation();
+    let distanceInfo: string | undefined;
+
+    if (officeLocation && latLong && latLong !== "GPS not available") {
+      const userLocation = parseLatLong(latLong);
+      if (userLocation) {
+        const locationCheck = checkLocation(
+          userLocation.lat,
+          userLocation.lon,
+          officeLocation.latitude,
+          officeLocation.longitude,
+          officeLocation.radiusMeters
+        );
+        distanceInfo = formatDistanceInfo(locationCheck.distanceMeters, officeLocation.name);
+
+        if (!locationCheck.withinRadius) {
+          return {
+            success: false,
+            message: `เช็คอินไม่สำเร็จ - ${locationCheck.message}`,
+            distanceInfo,
+          };
+        }
+      }
     }
 
     const now = getThaiTime();
@@ -69,9 +108,26 @@ export async function checkIn(
     revalidatePath("/");
     revalidatePath("/employee");
 
+    const statusText = status === "late" ? "สาย" : "ตรงเวลา";
+    const telegramCaption = [
+      `✅ <b>เช็คอินสำเร็จ</b>`,
+      `👤 <b>ชื่อ:</b> ${employee.name}`,
+      `⏰ <b>เวลา:</b> ${checkInTime}`,
+      `📍 <b>GPS:</b> ${latLong}`,
+      `📊 <b>สถานะ:</b> ${statusText}`,
+      ...(distanceInfo ? [`📏 <b>ระยะทาง:</b> ${distanceInfo}`] : []),
+    ].join("\n");
+
+    if (photoUrl && photoUrl.startsWith("data:image")) {
+      sendTelegramPhoto(photoUrl, telegramCaption);
+    } else {
+      sendTelegramMessage(telegramCaption);
+    }
+
     return {
       success: true,
       message: `เช็คอินสำเร็จ เวลา ${checkInTime} (${status === "late" ? "สาย" : "ตรงเวลา"})`,
+      distanceInfo,
       data: {
         id: record.id,
         checkIn: checkInTime,
@@ -97,10 +153,36 @@ export async function checkOut(
 
     const existing = await prisma.attendanceLog.findUnique({
       where: { empId_date: { empId, date: today } },
+      include: { employee: true },
     });
 
     if (!existing) {
       return { success: false, message: "ยังไม่ได้เช็คอินวันนี้" };
+    }
+
+    const officeLocation = await getActiveOfficeLocation();
+    let distanceInfo: string | undefined;
+
+    if (officeLocation && latLong && latLong !== "GPS not available") {
+      const userLocation = parseLatLong(latLong);
+      if (userLocation) {
+        const locationCheck = checkLocation(
+          userLocation.lat,
+          userLocation.lon,
+          officeLocation.latitude,
+          officeLocation.longitude,
+          officeLocation.radiusMeters
+        );
+        distanceInfo = formatDistanceInfo(locationCheck.distanceMeters, officeLocation.name);
+
+        if (!locationCheck.withinRadius) {
+          return {
+            success: false,
+            message: `เช็คเอาท์ไม่สำเร็จ - ${locationCheck.message}`,
+            distanceInfo,
+          };
+        }
+      }
     }
 
     const record = await prisma.attendanceLog.update({
@@ -111,9 +193,24 @@ export async function checkOut(
     revalidatePath("/");
     revalidatePath("/employee");
 
+    const telegramCaption = [
+      `🚪 <b>เช็คเอาท์สำเร็จ</b>`,
+      `👤 <b>ชื่อ:</b> ${existing.employee.name}`,
+      `⏰ <b>เวลา:</b> ${checkOutTime}`,
+      `📍 <b>GPS:</b> ${latLong}`,
+      ...(distanceInfo ? [`📏 <b>ระยะทาง:</b> ${distanceInfo}`] : []),
+    ].join("\n");
+
+    if (photoUrl && photoUrl.startsWith("data:image")) {
+      sendTelegramPhoto(photoUrl, telegramCaption);
+    } else {
+      sendTelegramMessage(telegramCaption);
+    }
+
     return {
       success: true,
       message: `เช็คเอาท์สำเร็จ เวลา ${checkOutTime}`,
+      distanceInfo,
       data: {
         id: record.id,
         checkOut: checkOutTime,

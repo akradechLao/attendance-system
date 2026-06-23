@@ -69,3 +69,53 @@ export function getSaturdayDate(): string {
   saturday.setDate(today.getDate() + diff);
   return `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, "0")}-${String(saturday.getDate()).padStart(2, "0")}`;
 }
+
+export interface LocationCheckResult {
+  withinRadius: boolean;
+  distanceMeters: number;
+  message: string;
+}
+
+export function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+export function checkLocation(
+  userLat: number,
+  userLon: number,
+  officeLat: number,
+  officeLon: number,
+  radiusMeters: number
+): LocationCheckResult {
+  const distance = calculateDistance(userLat, userLon, officeLat, officeLon);
+  const withinRadius = distance <= radiusMeters;
+
+  return {
+    withinRadius,
+    distanceMeters: Math.round(distance),
+    message: withinRadius
+      ? `อยู่ในระยะ ${Math.round(distance)} เมตร`
+      : `อยู่ห่าง ${Math.round(distance)} เมตร (เกินรัศมี ${radiusMeters} เมตร)`,
+  };
+}
+
+export function parseLatLong(latLong: string): { lat: number; lon: number } | null {
+  const match = latLong.match(/(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
+  if (!match) return null;
+  return { lat: parseFloat(match[1]), lon: parseFloat(match[2]) };
+}

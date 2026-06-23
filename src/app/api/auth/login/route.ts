@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setAdminSession, verifyCredentials } from "@/lib/auth";
+import { sendTelegramMessage } from "@/lib/telegram";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,6 +22,11 @@ export async function POST(request: NextRequest) {
     }
 
     await setAdminSession();
+
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+    const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+
+    sendTelegramMessage(`🔐 <b>Admin Login</b> - ${time}`);
 
     return NextResponse.json({
       success: true,

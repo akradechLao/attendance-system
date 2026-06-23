@@ -33,6 +33,7 @@ export default function EmployeePortal() {
   const [selectedEmpId, setSelectedEmpId] = useState<number | null>(null);
   const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([]);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [distanceInfo, setDistanceInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"checkin" | "checkout" | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
@@ -122,6 +123,7 @@ export default function EmployeePortal() {
     setConfirmAction(null);
     setLoading(true);
     setMessage(null);
+    setDistanceInfo(null);
 
     const { latLong } = await getLocation();
     const finalLatLong = latLong || "GPS not available";
@@ -140,6 +142,7 @@ export default function EmployeePortal() {
       : await checkOut(selectedEmpId, finalLatLong, photoUrl);
 
     setMessage({ type: result.success ? "success" : "error", text: result.message });
+    if (result.distanceInfo) setDistanceInfo(result.distanceInfo);
     setLoading(false);
 
     if (result.success) {
@@ -242,6 +245,12 @@ export default function EmployeePortal() {
               }`}
             >
               {message.text}
+            </div>
+          )}
+
+          {distanceInfo && (
+            <div className="mt-4 rounded-lg bg-blue-50 p-4 text-sm text-blue-700 border border-blue-200">
+              {distanceInfo}
             </div>
           )}
         </div>
