@@ -38,7 +38,7 @@ export default function EmployeesPage() {
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [editId, setEditId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [message, setMessage] = useState({ text: "", type: "" as "success" | "error" });
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" | null }>({ text: "", type: null });
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   async function loadData() {
@@ -61,7 +61,7 @@ export default function EmployeesPage() {
 
   function showMessage(text: string, type: "success" | "error") {
     setMessage({ text, type });
-    setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+    setTimeout(() => setMessage({ text: "", type: null }), 3000);
   }
 
   function handleAdd() {
@@ -137,7 +137,7 @@ export default function EmployeesPage() {
         </button>
       </div>
 
-      {message.text && (
+      {message.text && message.type && (
         <div
           className={`rounded-lg p-3 text-sm border ${
             message.type === "success"

@@ -34,7 +34,7 @@ export default function WfhPage() {
   const [selectedEmp, setSelectedEmp] = useState<number>(0);
   const [selectedDate, setSelectedDate] = useState("");
   const [reason, setReason] = useState("");
-  const [message, setMessage] = useState({ text: "", type: "" as "success" | "error" });
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" | null }>({ text: "", type: null });
   const [submitting, setSubmitting] = useState(false);
 
   async function loadData() {
@@ -58,7 +58,7 @@ export default function WfhPage() {
 
   function showMessage(text: string, type: "success" | "error") {
     setMessage({ text, type });
-    setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+    setTimeout(() => setMessage({ text: "", type: null }), 3000);
   }
 
   function getNextSaturday(): string {
@@ -128,7 +128,7 @@ export default function WfhPage() {
         </div>
       </div>
 
-      {message.text && (
+      {message.text && message.type && (
         <div
           className={`rounded-lg p-3 text-sm border ${
             message.type === "success"

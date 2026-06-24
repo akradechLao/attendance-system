@@ -67,9 +67,10 @@ export async function checkIn(
     });
     const isWfh = wfhRecord !== null && wfhRecord.status !== "rejected";
 
+    let distanceInfo: string | undefined;
+
     if (!isWfh) {
       const officeLocation = await getActiveOfficeLocation();
-      let distanceInfo: string | undefined;
 
       if (officeLocation && latLong && latLong !== "GPS not available") {
         const userLocation = parseLatLong(latLong);
@@ -173,9 +174,10 @@ export async function checkOut(
     });
     const isWfh = wfhRecord !== null && wfhRecord.status !== "rejected";
 
+    let distanceInfo: string | undefined;
+
     if (!isWfh) {
       const officeLocation = await getActiveOfficeLocation();
-      let distanceInfo: string | undefined;
 
       if (officeLocation && latLong && latLong !== "GPS not available") {
         const userLocation = parseLatLong(latLong);
