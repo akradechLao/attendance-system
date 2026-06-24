@@ -41,6 +41,10 @@ export default function Sidebar() {
       });
   }, [pathname]);
 
+  if (pathname === "/login") {
+    return null;
+  }
+
   const navItems = isLoggedIn ? adminNavItems : employeeNavItems;
 
   const handleLogout = async () => {
