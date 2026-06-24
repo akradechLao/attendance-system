@@ -353,7 +353,7 @@ export default function EmployeePortal() {
                       autoPlay
                       playsInline
                       muted
-                      className="mx-auto h-48 w-64 rounded-lg object-cover border-2 border-cream-dark"
+                      className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover border-2 border-cream-dark sm:h-48 sm:max-w-sm"
                       style={{ transform: "scaleX(-1)" }}
                     />
                     <button
@@ -380,7 +380,7 @@ export default function EmployeePortal() {
                     <img
                       src={capturedPhoto}
                       alt="Captured"
-                      className="mx-auto h-48 w-64 rounded-lg object-cover border-2 border-green-400"
+                      className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover border-2 border-green-400 sm:h-48 sm:max-w-sm"
                     />
                     <div className="absolute top-2 right-2 rounded-full bg-green-500 p-1">
                       <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
