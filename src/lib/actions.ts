@@ -773,3 +773,30 @@ export async function syncHolidaysFromApi(year: number) {
     };
   }
 }
+
+export async function getAttendanceWithPhotos(startDate: string, endDate: string) {
+  const records = await prisma.attendanceLog.findMany({
+    where: {
+      date: { gte: startDate, lte: endDate },
+      OR: [
+        { checkInPhoto: { not: null } },
+        { checkOutPhoto: { not: null } },
+      ],
+    },
+    include: { employee: true },
+    orderBy: { date: "desc" },
+  });
+
+  return records.map((r) => ({
+    id: r.id,
+    date: r.date,
+    employeeName: r.employee.name,
+    groupType: r.employee.groupType,
+    checkIn: r.checkIn,
+    checkInPhoto: r.checkInPhoto,
+    checkOut: r.checkOut,
+    checkOutPhoto: r.checkOutPhoto,
+    status: r.status,
+    latLong: r.latLong,
+  }));
+}
