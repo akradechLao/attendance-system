@@ -450,3 +450,215 @@ export async function isWfhDay(empId: number, date: string): Promise<boolean> {
   });
   return record !== null && record.status !== "rejected";
 }
+
+export interface EmployeeStats {
+  empId: number;
+  name: string;
+  groupType: string;
+  totalDays: number;
+  lateDays: number;
+  onTimeDays: number;
+  absentDays: number;
+  leaveDays: number;
+  wfhDays: number;
+  totalWorkHours: number;
+  avgCheckIn: string;
+}
+
+function getWorkDaysInRange(startDate: string, endDate: string): number {
+  let count = 0;
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+
+  while (current <= end) {
+    const day = current.getDay();
+    if (day !== 0) count++;
+    current.setDate(current.getDate() + 1);
+  }
+  return count;
+}
+
+function calcWorkHours(checkIn: string, checkOut: string): number {
+  const [inH, inM] = checkIn.split(":").map(Number);
+  const [outH, outM] = checkOut.split(":").map(Number);
+  return (outH * 60 + outM - inH * 60 - inM) / 60;
+}
+
+function getDatesInRange(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+
+  while (current <= end) {
+    const day = current.getDay();
+    if (day !== 0) {
+      dates.push(
+        `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`
+      );
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+}
+
+export async function getAttendanceStats(
+  startDate: string,
+  endDate: string
+): Promise<EmployeeStats[]> {
+  const employees = await prisma.employee.findMany({ orderBy: { id: "asc" } });
+  const workDates = getDatesInRange(startDate, endDate);
+
+  const attendance = await prisma.attendanceLog.findMany({
+    where: { date: { gte: startDate, lte: endDate } },
+    include: { employee: true },
+  });
+
+  const leaves = await prisma.leaveRequest.findMany({
+    where: {
+      status: { not: "rejected" },
+      OR: [
+        { startDate: { lte: endDate }, endDate: { gte: startDate } },
+      ],
+    },
+  });
+
+  const wfhRecords = await prisma.wfhRecord.findMany({
+    where: {
+      date: { gte: startDate, lte: endDate },
+      status: { not: "rejected" },
+    },
+  });
+
+  return employees.map((emp) => {
+    const empAttendance = attendance.filter((a) => a.empId === emp.id);
+    const empLeaves = leaves.filter(
+      (l) => l.empId === emp.id
+    );
+    const empWfh = wfhRecords.filter((w) => w.empId === emp.id);
+
+    const lateDays = empAttendance.filter((a) => a.status === "late").length;
+    const onTimeDays = empAttendance.filter((a) => a.status === "on_time").length;
+    const wfhDays = empWfh.length;
+    const leaveDays = empLeaves.length;
+
+    const attendedDates = new Set(empAttendance.map((a) => a.date));
+    const wfhDates = new Set(empWfh.map((w) => w.date));
+    const absentDays = workDates.filter(
+      (d) => !attendedDates.has(d) && !wfhDates.has(d)
+    ).length;
+
+    const totalWorkHours = empAttendance.reduce((sum, a) => {
+      if (a.checkIn && a.checkOut) {
+        return sum + calcWorkHours(a.checkIn, a.checkOut);
+      }
+      return sum;
+    }, 0);
+
+    const checkInTimes = empAttendance
+      .map((a) => a.checkIn)
+      .filter((c): c is string => c !== null);
+    const avgCheckIn =
+      checkInTimes.length > 0
+        ? (() => {
+            const totalMinutes = checkInTimes.reduce((sum, t) => {
+              const [h, m] = t.split(":").map(Number);
+              return sum + h * 60 + m;
+            }, 0);
+            const avg = Math.round(totalMinutes / checkInTimes.length);
+            return `${String(Math.floor(avg / 60)).padStart(2, "0")}:${String(avg % 60).padStart(2, "0")}`;
+          })()
+        : "-";
+
+    return {
+      empId: emp.id,
+      name: emp.name,
+      groupType: emp.groupType,
+      totalDays: lateDays + onTimeDays,
+      lateDays,
+      onTimeDays,
+      absentDays: Math.max(0, absentDays - leaveDays),
+      leaveDays,
+      wfhDays,
+      totalWorkHours: Math.round(totalWorkHours * 100) / 100,
+      avgCheckIn,
+    };
+  });
+}
+
+export async function getMonthlySummary(year: number, month: number) {
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+  return getAttendanceStats(startDate, endDate);
+}
+
+export async function getEmployeeAttendanceHistory(
+  empId: number,
+  startDate: string,
+  endDate: string
+) {
+  const attendance = await prisma.attendanceLog.findMany({
+    where: {
+      empId,
+      date: { gte: startDate, lte: endDate },
+    },
+    orderBy: { date: "asc" },
+  });
+
+  const wfhRecords = await prisma.wfhRecord.findMany({
+    where: {
+      empId,
+      date: { gte: startDate, lte: endDate },
+      status: { not: "rejected" },
+    },
+    orderBy: { date: "asc" },
+  });
+
+  const leaves = await prisma.leaveRequest.findMany({
+    where: {
+      empId,
+      status: { not: "rejected" },
+      OR: [
+        { startDate: { lte: endDate }, endDate: { gte: startDate } },
+      ],
+    },
+    orderBy: { startDate: "asc" },
+  });
+
+  const workDates = getDatesInRange(startDate, endDate);
+  const attendedDates = new Set(attendance.map((a) => a.date));
+  const wfhDates = new Set(wfhRecords.map((w) => w.date));
+
+  const dailyRecords = workDates.map((date) => {
+    const att = attendance.find((a) => a.date === date);
+    const isWfh = wfhDates.has(date);
+    const isLeave = leaves.some(
+      (l) => l.startDate <= date && l.endDate >= date
+    );
+
+    let status: string;
+    if (att) {
+      status = att.status === "late" ? "สาย" : "ตรงเวลา";
+    } else if (isWfh) {
+      status = "WFH";
+    } else if (isLeave) {
+      status = "ลา";
+    } else {
+      status = "ขาด";
+    }
+
+    return {
+      date,
+      checkIn: att?.checkIn || null,
+      checkOut: att?.checkOut || null,
+      status,
+      workHours:
+        att?.checkIn && att?.checkOut
+          ? Math.round(calcWorkHours(att.checkIn, att.checkOut) * 100) / 100
+          : null,
+    };
+  });
+
+  return dailyRecords;
+}
