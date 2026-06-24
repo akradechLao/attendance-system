@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import fs from "fs";
+import path from "path";
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,9 +48,14 @@ export async function GET(request: NextRequest) {
       wfhRecords = [];
     }
 
+    const regularPath = path.join(process.cwd(), "public", "fonts", "Sarabun-Regular.ttf");
+    const boldPath = path.join(process.cwd(), "public", "fonts", "Sarabun-Bold.ttf");
+    const regularBytes = fs.readFileSync(regularPath);
+    const boldBytes = fs.readFileSync(boldPath);
+
     const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont("Helvetica");
-    const fontBold = await pdfDoc.embedFont("Helvetica-Bold");
+    const font = await pdfDoc.embedFont(regularBytes);
+    const fontBold = await pdfDoc.embedFont(boldBytes);
 
     const PAGE_WIDTH = 842;
     const PAGE_HEIGHT = 595;
@@ -74,16 +81,16 @@ export async function GET(request: NextRequest) {
       const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
       let y = PAGE_HEIGHT - MARGIN_TOP;
 
-      page.drawText("Attendance Summary Report", {
+      page.drawText("รายงานสรุปการเข้างาน", {
         x: 50, y, size: 16, font: fontBold, color: rgb(0.1, 0.1, 0.3),
       });
       y -= 20;
-      page.drawText(`${startDate} to ${endDate}${empId ? " (Individual)" : ""}`, {
+      page.drawText(`${startDate} ถึง ${endDate}${empId ? " (รายบุคคล)" : ""}`, {
         x: 50, y, size: 10, font, color: rgb(0.4, 0.4, 0.4),
       });
       y -= 25;
 
-      const headers = ["No.", "Name", "Group", "Late", "Absent", "Leave", "WFH", "Work Days"];
+      const headers = ["ลำดับ", "ชื่อ", "กลุ่ม", "สาย", "ขาด", "ลา", "WFH", "วันทำงาน"];
       const colX = [50, 80, 230, 310, 360, 410, 460, 520];
 
       page.drawRectangle({
