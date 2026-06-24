@@ -735,3 +735,41 @@ export async function getCompanyHolidaysInRange(startDate: string, endDate: stri
     orderBy: { date: "asc" },
   });
 }
+
+export async function syncHolidaysFromApi(year: number) {
+  try {
+    const { fetchThaiHolidays } = await import("@/lib/thai-holidays");
+    const holidays = await fetchThaiHolidays(year);
+
+    let added = 0;
+    let skipped = 0;
+
+    for (const h of holidays) {
+      const existing = await prisma.companyHoliday.findUnique({
+        where: { date: h.date },
+      });
+      if (existing) {
+        skipped++;
+        continue;
+      }
+      const y = parseInt(h.date.substring(0, 4));
+      await prisma.companyHoliday.create({
+        data: { date: h.date, name: h.name, year: y },
+      });
+      added++;
+    }
+
+    revalidatePath("/holidays");
+    return {
+      success: true,
+      message: `ดึงวันหยุดปี ${year} สำเร็จ: เพิ่ม ${added} วัน, ข้าม ${skipped} วัน (มีอยู่แล้ว)`,
+      added,
+      skipped,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}

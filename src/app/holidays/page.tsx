@@ -5,6 +5,7 @@ import {
   getCompanyHolidays,
   addCompanyHoliday,
   deleteCompanyHoliday,
+  syncHolidaysFromApi,
 } from "@/lib/actions";
 
 interface Holiday {
@@ -14,24 +15,6 @@ interface Holiday {
   year: number;
 }
 
-const THAI_HOLIDAYS_2026 = [
-  { date: "2026-01-01", name: "วันขึ้นปีใหม่" },
-  { date: "2026-04-06", name: "วันจักรี" },
-  { date: "2026-04-13", name: "วันสงกรานต์" },
-  { date: "2026-04-14", name: "วันสงกรานต์" },
-  { date: "2026-04-15", name: "วันสงกรานต์" },
-  { date: "2026-05-01", name: "วันแรงงานแห่งชาติ" },
-  { date: "2026-05-04", name: "วันฉัตรมงคล" },
-  { date: "2026-06-03", name: "วันเฉลิมพระชนมพรรษาสมเด็จพระราชินี" },
-  { date: "2026-07-28", name: "วันเฉลิมพระชนมพรรษาพระบาทสมเด็จพระเจ้าอยู่หัว" },
-  { date: "2026-08-12", name: "วันเฉลิมพระชนมพรรษาสมเด็จพระบรมราชชนนีพันปีหลวง / วันแม่แห่งชาติ" },
-  { date: "2026-10-13", name: "วันคล้ายวันสวรรคตพระบาทสมเด็จพระบรมชนกาธิเบศร" },
-  { date: "2026-10-23", name: "วันปิยมหาราช" },
-  { date: "2026-12-05", name: "วันคล้ายวันพระบรมราชสมภพพระบาทสมเด็จพระบรมชนกาธิเบศร / วันพ่อแห่งชาติ" },
-  { date: "2026-12-10", name: "วันรัฐธรรมนูญ" },
-  { date: "2026-12-31", name: "วันสิ้นปี" },
-];
-
 export default function HolidaysPage() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +22,7 @@ export default function HolidaysPage() {
   const [name, setName] = useState("");
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | null }>({ text: "", type: null });
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -92,14 +76,12 @@ export default function HolidaysPage() {
     }
   }
 
-  async function handleAddAll2026() {
-    let added = 0;
-    for (const h of THAI_HOLIDAYS_2026) {
-      const result = await addCompanyHoliday(h.date, h.name);
-      if (result.success) added++;
-    }
-    showMessage(`เพิ่มวันหยุดราชการปี 2026 สำเร็จ ${added} วัน`, "success");
-    loadHolidays();
+  async function handleSyncFromApi() {
+    setSyncing(true);
+    const result = await syncHolidaysFromApi(selectedYear);
+    setSyncing(false);
+    showMessage(result.message, result.success ? "success" : "error");
+    if (result.success) loadHolidays();
   }
 
   const thaiYear = selectedYear + 543;
@@ -115,10 +97,11 @@ export default function HolidaysPage() {
           </div>
         </div>
         <button
-          onClick={handleAddAll2026}
-          className="rounded-lg border border-gold/30 bg-gold/5 px-4 py-2.5 text-sm font-medium text-gold-dark hover:bg-gold/10 transition-colors"
+          onClick={handleSyncFromApi}
+          disabled={syncing}
+          className="rounded-lg border border-gold/30 bg-gold/5 px-4 py-2.5 text-sm font-medium text-gold-dark hover:bg-gold/10 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
-          📅 เพิ่มวันหยุดราชการ ปี 2026
+          {syncing ? "กำลังดึงข้อมูล..." : `📅 ดึงวันหยุดราชการปี ${selectedYear} จาก API`}
         </button>
       </div>
 
