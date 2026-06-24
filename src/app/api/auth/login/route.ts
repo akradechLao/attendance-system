@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
 
     sendTelegramMessage(`🔐 <b>Admin Login</b> - ${time}`);
 
+    const isSecure = request.url.startsWith("https");
+
     const response = NextResponse.json({
       success: true,
       message: "Login สำเร็จ",
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set(SESSION_COOKIE, SESSION_SECRET, {
       httpOnly: true,
-      secure: true,
+      secure: isSecure,
       sameSite: "lax",
       maxAge: 60 * 60 * 24,
       path: "/",
