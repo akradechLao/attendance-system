@@ -937,13 +937,13 @@ export async function generateAttendanceReportPdf(
     let y = PAGE_HEIGHT - MARGIN_TOP;
 
     page.drawText("รายงานสรุปการเข้างาน", {
-      x: MARGIN_LEFT, y, size: 22, font: fontBold, color: rgb(0.1, 0.1, 0.3),
+      x: MARGIN_LEFT, y, size: 24, font: fontBold, color: rgb(0.1, 0.1, 0.3),
     });
-    y -= 28;
+    y -= 32;
     page.drawText(`${startDate} ถึง ${endDate}${empId ? " (รายบุคคล)" : ""}`, {
-      x: MARGIN_LEFT, y, size: 13, font, color: rgb(0.4, 0.4, 0.4),
+      x: MARGIN_LEFT, y, size: 18, font, color: rgb(0.4, 0.4, 0.4),
     });
-    y -= 30;
+    y -= 35;
 
     const headers = ["ลำดับ", "ชื่อ", "กลุ่ม", "สาย", "ขาด", "ลา", "WFH", "วันทำงาน"];
     const usableWidth = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
@@ -955,7 +955,7 @@ export async function generateAttendanceReportPdf(
     });
     headers.forEach((h, i) => {
       page.drawText(h, {
-        x: colX[i] + 6, y, size: 11, font: fontBold, color: rgb(1, 1, 1),
+        x: colX[i] + 6, y, size: 16, font: fontBold, color: rgb(1, 1, 1),
       });
     });
     y -= 30;
@@ -1012,7 +1012,7 @@ export async function generateAttendanceReportPdf(
     ];
     rowData.forEach((text, i) => {
       page.drawText(text, {
-        x: colX[i] + 6, y, size: 11, font, color: rgb(0.1, 0.1, 0.1),
+        x: colX[i] + 6, y, size: 16, font, color: rgb(0.1, 0.1, 0.1),
       });
     });
 
