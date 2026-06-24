@@ -113,7 +113,7 @@ export default function WfhPage() {
         <div className="h-10 w-1.5 gradient-gold rounded-full" />
         <div>
           <h1 className="text-2xl font-bold text-navy">Work From Home (WFH)</h1>
-          <p className="mt-0.5 text-sm text-navy/50">ขอสิทธิ์ WFH วันเสาร์ 每人 1 วัน/เดือน</p>
+          <p className="mt-0.5 text-sm text-navy/50">ขอสิทธิ์ WFH วันเสาร์ คนละ 1 วัน/เดือน</p>
         </div>
       </div>
 
