@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
-import { clearAdminSession } from "@/lib/auth";
 import { sendTelegramMessage } from "@/lib/telegram";
 
-export async function POST() {
-  await clearAdminSession();
+const SESSION_COOKIE = "admin_session";
 
+export async function POST() {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
   const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
   sendTelegramMessage(`🔓 <b>Admin Logout</b> - ${time}`);
 
-  return NextResponse.json({ success: true, redirect: "/login" });
+  const response = NextResponse.json({ success: true, redirect: "/login" });
+  response.cookies.set(SESSION_COOKIE, "", { maxAge: 0, path: "/" });
+
+  return response;
 }
