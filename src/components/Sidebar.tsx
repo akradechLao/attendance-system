@@ -78,20 +78,20 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col gradient-navy shadow-navy transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-screen w-60 flex-col gradient-navy shadow-navy transition-transform duration-300 lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-20 items-center justify-center border-b border-white/10">
+        <div className="flex h-16 items-center justify-center border-b border-white/10 flex-shrink-0">
           <div className="text-center">
-            <h1 className="text-xl font-bold tracking-wide">
+            <h1 className="text-lg font-bold tracking-wide">
               <span className="text-gradient-gold">HR</span>
               <span className="text-white"> Attendance</span>
             </h1>
-            <div className="mt-1 h-0.5 w-12 mx-auto gradient-gold rounded-full" />
+            <div className="mt-1 h-0.5 w-10 mx-auto gradient-gold rounded-full" />
           </div>
         </div>
-        <nav className="flex-1 space-y-1 p-4">
+        <nav className="flex-1 overflow-y-auto space-y-0.5 p-3 min-h-0">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -99,14 +99,14 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
                   isActive
                     ? "bg-gold/20 text-gold-light border border-gold/30"
                     : "text-white/70 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 <svg
-                  className={`h-5 w-5 ${isActive ? "text-gold" : "text-white/50"}`}
+                  className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-gold" : "text-white/50"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -118,18 +118,18 @@ export default function Sidebar() {
                     d={item.icon}
                   />
                 </svg>
-                {item.label}
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
         </nav>
-        <div className="border-t border-white/10 p-4 space-y-3">
+        <div className="border-t border-white/10 p-3 space-y-2 flex-shrink-0">
           {isLoggedIn ? (
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-all duration-200"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-medium text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-all duration-200"
             >
-              <svg className="h-5 w-5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 text-white/50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
               ออกจากระบบ
@@ -137,16 +137,16 @@ export default function Sidebar() {
           ) : (
             <button
               onClick={handleLogin}
-              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium gradient-gold text-navy hover:opacity-90 transition-all duration-200"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-medium gradient-gold text-navy hover:opacity-90 transition-all duration-200"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
               </svg>
               เข้าสู่ระบบ Admin
             </button>
           )}
-          <div className="text-center text-xs text-white/40">
-            ระบบบันทึกเวลาเข้า-ออกงาน v1.0
+          <div className="text-center text-[10px] text-white/40">
+            v1.0
           </div>
         </div>
       </aside>
