@@ -113,3 +113,14 @@ model OfficeLocation {
 
   @@map("office_locations")
 }
+
+model CompanyHoliday {
+  id        Int      @id @default(autoincrement())
+  date      String
+  name      String
+  year      Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([date])
+  @@map("company_holidays")
+}

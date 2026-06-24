@@ -664,3 +664,57 @@ export async function getEmployeeAttendanceHistory(
 
   return dailyRecords;
 }
+
+export async function getCompanyHolidays(year?: number) {
+  const now = getThaiTime();
+  const y = year || now.getFullYear();
+  return prisma.companyHoliday.findMany({
+    where: { year: y },
+    orderBy: { date: "asc" },
+  });
+}
+
+export async function addCompanyHoliday(date: string, name: string) {
+  try {
+    const year = parseInt(date.substring(0, 4));
+    const existing = await prisma.companyHoliday.findUnique({
+      where: { date },
+    });
+    if (existing) {
+      return { success: false, message: "วันนี้ถูกบันทึกเป็นวันหยุดแล้ว" };
+    }
+    await prisma.companyHoliday.create({
+      data: { date, name, year },
+    });
+    revalidatePath("/holidays");
+    return { success: true, message: "เพิ่มวันหยุดสำเร็จ" };
+  } catch (error) {
+    return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function deleteCompanyHoliday(id: number) {
+  try {
+    await prisma.companyHoliday.delete({ where: { id } });
+    revalidatePath("/holidays");
+    return { success: true, message: "ลบวันหยุดสำเร็จ" };
+  } catch (error) {
+    return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function isCompanyHoliday(date: string): Promise<boolean> {
+  const record = await prisma.companyHoliday.findUnique({
+    where: { date },
+  });
+  return record !== null;
+}
+
+export async function getCompanyHolidaysInRange(startDate: string, endDate: string) {
+  return prisma.companyHoliday.findMany({
+    where: {
+      date: { gte: startDate, lte: endDate },
+    },
+    orderBy: { date: "asc" },
+  });
+}
