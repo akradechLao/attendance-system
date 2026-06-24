@@ -37,6 +37,7 @@ model Employee {
   shiftSchedules    ShiftSchedule[]
   leaveRequests     LeaveRequest[]
   wfhRecords        WfhRecord[]
+  onboarding        OnboardingRecord?
 
   @@map("employees")
 }
@@ -123,4 +124,104 @@ model CompanyHoliday {
 
   @@unique([date])
   @@map("company_holidays")
+}
+
+enum OnboardingStatus {
+  in_progress
+  completed
+  on_hold
+}
+
+enum OnboardingDocStatus {
+  pending
+  submitted
+  verified
+  rejected
+}
+
+model OnboardingRecord {
+  id          Int              @id @default(autoincrement())
+  empId       Int              @unique @map("emp_id")
+  status      OnboardingStatus @default(in_progress)
+  startDate   String           @map("start_date")
+  endDate     String?          @map("end_date")
+  notes       String?          @db.Text
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  employee    Employee         @relation(fields: [empId], references: [id])
+  steps       OnboardingStep[]
+  documents   OnboardingDocument[]
+  equipment   OnboardingEquipment[]
+  training    OnboardingTraining[]
+
+  @@map("onboarding_records")
+}
+
+model OnboardingStep {
+  id              Int              @id @default(autoincrement())
+  onboardingId    Int              @map("onboarding_id")
+  stepOrder       Int              @map("step_order")
+  stepKey         String           @map("step_key")
+  stepLabel       String           @map("step_label")
+  isCompleted     Boolean          @default(false) @map("is_completed")
+  completedAt     DateTime?        @map("completed_at")
+  completedBy     String?          @map("completed_by")
+  notes           String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  onboarding      OnboardingRecord @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+  @@unique([onboardingId, stepKey])
+  @@map("onboarding_steps")
+}
+
+model OnboardingDocument {
+  id              Int              @id @default(autoincrement())
+  onboardingId    Int              @map("onboarding_id")
+  docType         String           @map("doc_type")
+  docLabel        String           @map("doc_label")
+  status          OnboardingDocStatus @default(pending)
+  fileUrl         String?          @db.Text @map("file_url")
+  fileName        String?          @map("file_name")
+  notes           String?
+  verifiedAt      DateTime?        @map("verified_at")
+  verifiedBy      String?          @map("verified_by")
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  onboarding      OnboardingRecord @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_documents")
+}
+
+model OnboardingEquipment {
+  id              Int              @id @default(autoincrement())
+  onboardingId    Int              @map("onboarding_id")
+  equipType       String           @map("equip_type")
+  equipName       String           @map("equip_name")
+  serialNumber    String?          @map("serial_number")
+  notes           String?
+  assignedAt      DateTime?        @map("assigned_at")
+  returnedAt      DateTime?        @map("returned_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  onboarding      OnboardingRecord @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_equipment")
+}
+
+model OnboardingTraining {
+  id              Int              @id @default(autoincrement())
+  onboardingId    Int              @map("onboarding_id")
+  trainingName    String           @map("training_name")
+  trainer         String?
+  scheduledDate   String?          @map("scheduled_date")
+  completedDate   String?          @map("completed_date")
+  status          String           @default("scheduled") // scheduled | completed | cancelled
+  notes           String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  onboarding      OnboardingRecord @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_training")
 }
