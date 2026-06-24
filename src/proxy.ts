@@ -5,7 +5,7 @@ export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isLoginPage = pathname === "/login";
   const isApiAuth = pathname.startsWith("/api/auth");
-  const isEmployeePage = pathname === "/employee";
+  const isEmployeePage = pathname.startsWith("/employee");
 
   if (isApiAuth || isEmployeePage) {
     return NextResponse.next();

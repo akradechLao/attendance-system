@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { checkIn, checkOut, getAllEmployees, getTodayAttendance } from "@/lib/actions";
+import { checkIn, checkOut, getAllEmployees, getTodayAttendance, getEmployeeWeeklyStats } from "@/lib/actions";
 import { useGeolocation } from "@/hooks/useGeolocation";
 
 interface Employee {
@@ -40,6 +40,15 @@ export default function EmployeePortal() {
   const [confirmAction, setConfirmAction] = useState<"checkin" | "checkout" | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [showWeeklyHistory, setShowWeeklyHistory] = useState(false);
+  const [weeklyStats, setWeeklyStats] = useState<{
+    days: { date: string; dayName: string; checkIn: string | null; checkOut: string | null; status: string; workHours: number | null }[];
+    lateDays: number;
+    onTimeDays: number;
+    absentDays: number;
+    workHours: number;
+  } | null>(null);
+  const [loadingWeekly, setLoadingWeekly] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -165,6 +174,27 @@ export default function EmployeePortal() {
     stopCamera();
   };
 
+  const handleShowWeeklyHistory = async () => {
+    if (!selectedEmpId) return;
+    setLoadingWeekly(true);
+    setShowWeeklyHistory(true);
+    try {
+      const data = await getEmployeeWeeklyStats(selectedEmpId);
+      if (data) {
+        setWeeklyStats({
+          days: data.days,
+          lateDays: data.lateDays,
+          onTimeDays: data.onTimeDays,
+          absentDays: data.absentDays,
+          workHours: data.workHours,
+        });
+      }
+    } catch {
+    } finally {
+      setLoadingWeekly(false);
+    }
+  };
+
   const myTodayRecord = todayRecords.find((r) => r.employee.id === selectedEmpId);
 
   return (
@@ -240,13 +270,13 @@ export default function EmployeePortal() {
 
           {selectedEmpId && (
             <button
-              onClick={() => router.push(`/employee/history/${selectedEmpId}`)}
+              onClick={handleShowWeeklyHistory}
               className="mt-3 w-full rounded-lg border border-cream-dark bg-cream/50 px-4 py-2.5 text-sm font-medium text-navy/70 hover:bg-cream transition-colors flex items-center justify-center gap-2"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              ดูประวัติย้อนหลังเดือนนี้
+              ดูประวัติสัปดาห์นี้
             </button>
           )}
 
@@ -441,6 +471,91 @@ export default function EmployeePortal() {
               </div>
               {!capturedPhoto && (
                 <p className="mt-2 text-xs text-navy/40">กรุณาถ่ายภาพก่อนกดยืนยัน</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Weekly History Modal */}
+      {showWeeklyHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl border border-cream-dark bg-white shadow-navy max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="gradient-navy px-5 py-4 flex items-center justify-between flex-shrink-0">
+              <h3 className="text-base font-semibold text-white">สรุปการเข้างานสัปดาห์นี้</h3>
+              <button
+                onClick={() => { setShowWeeklyHistory(false); setWeeklyStats(null); }}
+                className="rounded-lg bg-white/20 p-1.5 text-white hover:bg-white/30 transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto p-5">
+              {loadingWeekly ? (
+                <div className="text-center py-8 text-navy/40">กำลังโหลด...</div>
+              ) : weeklyStats ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-center">
+                      <div className="text-xl font-bold text-green-600">{weeklyStats.onTimeDays}</div>
+                      <div className="text-[10px] text-green-500">ตรงเวลา</div>
+                    </div>
+                    <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-center">
+                      <div className="text-xl font-bold text-red-600">{weeklyStats.lateDays}</div>
+                      <div className="text-[10px] text-red-500">สาย</div>
+                    </div>
+                    <div className="rounded-lg bg-orange-50 border border-orange-200 p-3 text-center">
+                      <div className="text-xl font-bold text-orange-600">{weeklyStats.absentDays}</div>
+                      <div className="text-[10px] text-orange-500">ขาด</div>
+                    </div>
+                    <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-center">
+                      <div className="text-xl font-bold text-blue-600">{weeklyStats.workHours}</div>
+                      <div className="text-[10px] text-blue-500">ชม.รวม</div>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-cream-dark">
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-navy/60">วัน</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-navy/60">เข้า</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-navy/60">ออก</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-navy/60">ชม.</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-navy/60">สถานะ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {weeklyStats.days.map((day) => (
+                          <tr key={day.date} className="border-b border-cream-dark/50">
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-navy">{day.dayName}</div>
+                              <div className="text-[10px] text-navy/40">{day.date}</div>
+                            </td>
+                            <td className="px-3 py-2 text-center text-navy/70">{day.checkIn || "-"}</td>
+                            <td className="px-3 py-2 text-center text-navy/70">{day.checkOut || "-"}</td>
+                            <td className="px-3 py-2 text-center text-navy/70">{day.workHours || "-"}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                day.status === "ตรงเวลา" ? "bg-green-100 text-green-800" :
+                                day.status === "สาย" ? "bg-red-100 text-red-800" :
+                                day.status === "WFH" ? "bg-blue-100 text-blue-800" :
+                                day.status === "ลา" ? "bg-purple-100 text-purple-800" :
+                                day.status === "ขาด" ? "bg-orange-100 text-orange-800" :
+                                "bg-gray-100 text-gray-800"
+                              }`}>
+                                {day.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-navy/40">ไม่มีข้อมูล</div>
               )}
             </div>
           </div>

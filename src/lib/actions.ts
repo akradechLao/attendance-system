@@ -1412,3 +1412,108 @@ export async function getEmployeeMonthlyStats(empId: number, year: number, month
     history,
   };
 }
+
+// ===== EMPLOYEE WEEKLY STATS =====
+
+export interface WeeklyDayItem {
+  date: string;
+  dayName: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  status: string;
+  workHours: number | null;
+}
+
+export async function getEmployeeWeeklyStats(empId: number): Promise<{ employee: { id: number; name: string; groupType: string }; weekStart: string; weekEnd: string; days: WeeklyDayItem[]; lateDays: number; onTimeDays: number; absentDays: number; workHours: number } | null> {
+  const employee = await prisma.employee.findUnique({ where: { id: empId } });
+  if (!employee) return null;
+
+  const now = getThaiTime();
+  const dayOfWeek = now.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + mondayOffset);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const weekStart = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+  const weekEnd = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, "0")}-${String(sunday.getDate()).padStart(2, "0")}`;
+
+  const allDates: string[] = [];
+  const current = new Date(monday);
+  const dayNames = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    allDates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+  }
+
+  const [attendance, leaves, wfhRecords] = await Promise.all([
+    prisma.attendanceLog.findMany({
+      where: { empId, date: { gte: weekStart, lte: weekEnd } },
+    }),
+    prisma.leaveRequest.findMany({
+      where: {
+        empId,
+        status: { not: "rejected" },
+        OR: [{ startDate: { lte: weekEnd }, endDate: { gte: weekStart } }],
+      },
+    }),
+    prisma.wfhRecord.findMany({
+      where: {
+        empId,
+        date: { gte: weekStart, lte: weekEnd },
+        status: { not: "rejected" },
+      },
+    }),
+  ]);
+
+  const wfhDates = new Set(wfhRecords.map((w) => w.date));
+  let lateDays = 0;
+  let onTimeDays = 0;
+  let absentDays = 0;
+  let totalWorkHours = 0;
+
+  const days: WeeklyDayItem[] = allDates.map((date) => {
+    const att = attendance.find((a) => a.date === date);
+    const d = new Date(date + "T00:00:00");
+    const dayName = dayNames[d.getDay()];
+
+    let status: string;
+    if (att) {
+      status = att.status === "late" ? "สาย" : "ตรงเวลา";
+      if (att.status === "late") lateDays++;
+      else onTimeDays++;
+    } else if (wfhDates.has(date)) {
+      status = "WFH";
+    } else if (leaves.some((l) => l.startDate <= date && l.endDate >= date)) {
+      status = "ลา";
+    } else {
+      status = "ขาด";
+      absentDays++;
+    }
+
+    const workHours = att?.checkIn && att?.checkOut ? Math.round(calcWorkHours(att.checkIn, att.checkOut) * 100) / 100 : null;
+    if (workHours) totalWorkHours += workHours;
+
+    return {
+      date,
+      dayName,
+      checkIn: att?.checkIn || null,
+      checkOut: att?.checkOut || null,
+      status,
+      workHours,
+    };
+  });
+
+  return {
+    employee: { id: employee.id, name: employee.name, groupType: employee.groupType },
+    weekStart,
+    weekEnd,
+    days,
+    lateDays,
+    onTimeDays,
+    absentDays,
+    workHours: Math.round(totalWorkHours * 100) / 100,
+  };
+}
