@@ -95,9 +95,15 @@ export default function ReportsPage() {
     try {
       const empIdParam = pdfExportEmpId || undefined;
       const pdfDataUrl = await generateAttendanceReportPdf(startDate, endDate, empIdParam);
+      
+      if (!pdfDataUrl || !pdfDataUrl.startsWith("data:application/pdf;base64,")) {
+        throw new Error("Invalid PDF data");
+      }
+
       const empName = pdfExportEmpId
         ? stats.find((s) => s.empId === pdfExportEmpId)?.name || "employee"
         : "all-employees";
+      
       const link = document.createElement("a");
       link.href = pdfDataUrl;
       link.download = `attendance-${empName}-${startDate}-to-${endDate}.pdf`;
@@ -106,9 +112,41 @@ export default function ReportsPage() {
       document.body.removeChild(link);
     } catch (error) {
       console.error("PDF export error:", error);
+      alert("เกิดข้อผิดพลาดในการสร้าง PDF: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setExportingPdf(false);
     }
+  }
+
+  function handleExportCsv() {
+    const headers = ["No.", "Name", "Group", "Late", "Absent", "Leave", "WFH", "Work Hours", "Avg Check-in"];
+    const rows = stats.map((emp, idx) => [
+      idx + 1,
+      emp.name,
+      emp.groupType,
+      emp.lateDays,
+      emp.absentDays,
+      emp.leaveDays,
+      emp.wfhDays,
+      emp.totalWorkHours,
+      emp.avgCheckIn,
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(","))
+    ].join("\n");
+
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `attendance-${startDate}-to-${endDate}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   const selectedEmpData = stats.find((s) => s.empId === selectedEmp);
@@ -157,6 +195,16 @@ export default function ReportsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             {exportingPdf ? "กำลังสร้าง PDF..." : "ดาวน์โหลด PDF"}
+          </button>
+          <button
+            onClick={handleExportCsv}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-green-100 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            ดาวน์โหลด CSV
           </button>
         </div>
       </div>
