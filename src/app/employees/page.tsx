@@ -42,17 +42,27 @@ export default function EmployeesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   async function loadData() {
-    setLoading(true);
-    const emps = await getAllEmployees();
-    setEmployees(emps);
+    try {
+      setLoading(true);
+      const emps = await getAllEmployees();
+      setEmployees(emps);
 
-    const usage: Record<number, number> = {};
-    for (const emp of emps) {
-      const records = await getWfhOfMonth(emp.id);
-      usage[emp.id] = records.length;
+      const usage: Record<number, number> = {};
+      for (const emp of emps) {
+        try {
+          const records = await getWfhOfMonth(emp.id);
+          usage[emp.id] = records.length;
+        } catch {
+          usage[emp.id] = 0;
+        }
+      }
+      setWfhUsage(usage);
+    } catch (error) {
+      console.error("Load error:", error);
+      setMessage({ text: "ไม่สามารถโหลดข้อมูลได้", type: "error" });
+    } finally {
+      setLoading(false);
     }
-    setWfhUsage(usage);
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -137,6 +147,31 @@ export default function EmployeesPage() {
         </button>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-cream-dark bg-white p-5 shadow-gold">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="inline-flex rounded-full bg-navy/10 px-2 py-0.5 text-xs font-semibold text-navy">กลุ่ม A</span>
+            <span className="text-sm font-medium text-navy">พนักงานออฟฟิศ</span>
+          </div>
+          <div className="space-y-1 text-sm text-navy/70">
+            <p>⏰ เวลาทำงาน: <span className="font-medium text-navy">08:00 - 17:00</span></p>
+            <p>🍽️ พักเที่ยง: <span className="font-medium text-navy">11:45 - 12:45</span></p>
+            <p>📅 เข้าเวรวันเสาร์ (ผลัดกัน)</p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-cream-dark bg-white p-5 shadow-gold">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="inline-flex rounded-full bg-gold/20 px-2 py-0.5 text-xs font-semibold text-gold-dark">กลุ่ม B</span>
+            <span className="text-sm font-medium text-navy">พนักงานโอที</span>
+          </div>
+          <div className="space-y-1 text-sm text-navy/70">
+            <p>⏰ เวลาทำงาน: <span className="font-medium text-navy">07:00 - 16:00</span></p>
+            <p>🔥 โอที: <span className="font-medium text-red-600">16:00 - 20:00 (บังคับ)</span></p>
+            <p>🍽️ พักเที่ยง: <span className="font-medium text-navy">11:45 - 12:45</span></p>
+          </div>
+        </div>
+      </div>
+
       {message.text && message.type && (
         <div
           className={`rounded-lg p-3 text-sm border ${
@@ -174,9 +209,24 @@ export default function EmployeesPage() {
                   onChange={(e) => setForm({ ...form, groupType: e.target.value as "A" | "B" })}
                   className="mt-1 w-full rounded-lg border border-cream-dark bg-cream/50 px-4 py-2.5 text-navy focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
                 >
-                  <option value="A">กลุ่ม A (08:00-17:00)</option>
-                  <option value="B">กลุ่ม B (07:00-16:00)</option>
+                  <option value="A">กลุ่ม A - ออฟฟิศ (08:00-17:00, พัก 11:45-12:45)</option>
+                  <option value="B">กลุ่ม B - โอที (07:00-16:00 + โอที 16:00-20:00, พัก 11:45-12:45)</option>
                 </select>
+                <div className="mt-2 rounded-lg bg-cream/50 border border-cream-dark p-3">
+                  {form.groupType === "A" ? (
+                    <div className="text-xs text-navy/70 space-y-1">
+                      <p>⏰ ทำงาน: 08:00 - 17:00</p>
+                      <p>🍽️ พักเที่ยง: 11:45 - 12:45</p>
+                      <p>📅 เข้าเวรวันเสาร์ (ผลัดกัน)</p>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-navy/70 space-y-1">
+                      <p>⏰ ทำงาน: 07:00 - 16:00</p>
+                      <p>🔥 โอทีบังคับ: 16:00 - 20:00</p>
+                      <p>🍽️ พักเที่ยง: 11:45 - 12:45</p>
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-navy/70">สิทธิ์ WFH (วัน/เดือน)</label>
@@ -240,20 +290,21 @@ export default function EmployeesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-cream-dark bg-cream/50">
-                  <th className="whitespace-nowrap px-6 py-3 text-left text-xs font-semibold text-navy/60 uppercase">รหัส</th>
-                  <th className="whitespace-nowrap px-6 py-3 text-left text-xs font-semibold text-navy/60 uppercase">ชื่อ-นามสกุล</th>
-                  <th className="whitespace-nowrap px-6 py-3 text-left text-xs font-semibold text-navy/60 uppercase">กลุ่ม</th>
-                  <th className="whitespace-nowrap px-6 py-3 text-left text-xs font-semibold text-navy/60 uppercase"> WFH เดือนนี้</th>
-                  <th className="whitespace-nowrap px-6 py-3 text-left text-xs font-semibold text-navy/60 uppercase">วันหยุด</th>
-                  <th className="whitespace-nowrap px-6 py-3 text-right text-xs font-semibold text-navy/60 uppercase">จัดการ</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold text-navy/60 uppercase">รหัส</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold text-navy/60 uppercase">ชื่อ-นามสกุล</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">กลุ่ม</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">เวลาทำงาน</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">WFH เดือนนี้</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">วันหยุด</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-navy/60 uppercase">จัดการ</th>
                 </tr>
               </thead>
               <tbody>
                 {employees.map((emp) => (
                   <tr key={emp.id} className="border-b border-cream-dark/50 hover:bg-cream/30 transition-colors">
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-navy/60">{emp.id}</td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-navy">{emp.name}</td>
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-navy/60">{emp.id}</td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-medium text-navy">{emp.name}</td>
+                    <td className="whitespace-nowrap px-4 py-4 text-center">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
                           emp.groupType === "A" ? "bg-navy/10 text-navy" : "bg-gold/20 text-gold-dark"
@@ -262,13 +313,16 @@ export default function EmployeesPage() {
                         กลุ่ม {emp.groupType}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-navy/70">
+                    <td className="whitespace-nowrap px-4 py-4 text-center text-xs text-navy/70">
+                      {emp.groupType === "A" ? "08:00-17:00" : "07:00-16:00 (+โอที)"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-center text-sm text-navy/70">
                       {wfhUsage[emp.id] || 0} / {emp.wfhQuota} วัน
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-navy/70">
+                    <td className="whitespace-nowrap px-4 py-4 text-center text-sm text-navy/70">
                       {emp.preferredOffDay === "Saturday" ? "เสาร์" : emp.preferredOffDay === "Sunday" ? "อาทิตย์" : "-"}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-right">
+                    <td className="whitespace-nowrap px-4 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEdit(emp)}

@@ -5,6 +5,8 @@ export interface BusinessRule {
   workEnd: string;
   otStart?: string;
   otEnd?: string;
+  lunchStart: string;
+  lunchEnd: string;
   hasSaturdayRotation: boolean;
   canChooseOffDay: boolean;
 }
@@ -13,14 +15,18 @@ export const BUSINESS_RULES: Record<GroupType, BusinessRule> = {
   A: {
     workStart: "08:00",
     workEnd: "17:00",
+    lunchStart: "11:45",
+    lunchEnd: "12:45",
     hasSaturdayRotation: true,
     canChooseOffDay: false,
   },
   B: {
     workStart: "07:00",
     workEnd: "16:00",
-    otStart: "17:00",
+    otStart: "16:00",
     otEnd: "20:00",
+    lunchStart: "11:45",
+    lunchEnd: "12:45",
     hasSaturdayRotation: false,
     canChooseOffDay: true,
   },
