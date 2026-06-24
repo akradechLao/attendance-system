@@ -59,6 +59,7 @@ export default function ReportsPage() {
   const [otSummary, setOtSummary] = useState<OtSummaryItem[]>([]);
   const [activeTab, setActiveTab] = useState<"summary" | "ot">("summary");
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [pdfExportEmpId, setPdfExportEmpId] = useState<number | null>(null);
 
   async function loadStats() {
     setLoading(true);
@@ -92,10 +93,14 @@ export default function ReportsPage() {
   async function handleExportPdf() {
     setExportingPdf(true);
     try {
-      const pdfDataUrl = await generateAttendanceReportPdf(startDate, endDate);
+      const empIdParam = pdfExportEmpId || undefined;
+      const pdfDataUrl = await generateAttendanceReportPdf(startDate, endDate, empIdParam);
+      const empName = pdfExportEmpId
+        ? stats.find((s) => s.empId === pdfExportEmpId)?.name || "employee"
+        : "all-employees";
       const link = document.createElement("a");
       link.href = pdfDataUrl;
-      link.download = `attendance-report-${startDate}-to-${endDate}.pdf`;
+      link.download = `attendance-${empName}-${startDate}-to-${endDate}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -124,7 +129,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-1.5 gradient-gold rounded-full" />
           <div>
@@ -132,16 +137,28 @@ export default function ReportsPage() {
             <p className="mt-0.5 text-sm text-navy/50">ดูข้อมูลย้อนหลัง ขาด ลา มาสาย OT</p>
           </div>
         </div>
-        <button
-          onClick={handleExportPdf}
-          disabled={exportingPdf || loading}
-          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          {exportingPdf ? "กำลังสร้าง PDF..." : "ดาวน์โหลด PDF"}
-        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={pdfExportEmpId || ""}
+            onChange={(e) => setPdfExportEmpId(e.target.value ? Number(e.target.value) : null)}
+            className="rounded-lg border border-cream-dark bg-white px-3 py-2.5 text-sm text-navy focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
+          >
+            <option value="">ทุกคน</option>
+            {stats.map((emp) => (
+              <option key={emp.empId} value={emp.empId}>{emp.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleExportPdf}
+            disabled={exportingPdf || loading}
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {exportingPdf ? "กำลังสร้าง PDF..." : "ดาวน์โหลด PDF"}
+          </button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-cream-dark bg-white p-6 shadow-gold">

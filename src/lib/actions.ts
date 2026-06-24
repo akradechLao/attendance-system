@@ -862,71 +862,45 @@ export async function getOtSummary(
 
 export async function generateAttendanceReportPdf(
   startDate: string,
-  endDate: string
+  endDate: string,
+  empId?: number
 ): Promise<string> {
   const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
-  const employees = await prisma.employee.findMany({ orderBy: { id: "asc" } });
+
+  const whereClause = empId ? { id: empId } : {};
+  const employees = await prisma.employee.findMany({ where: whereClause, orderBy: { id: "asc" } });
+
   const records = await prisma.attendanceLog.findMany({
-    where: { date: { gte: startDate, lte: endDate } },
-    include: { employee: true },
+    where: {
+      ...(empId ? { empId } : {}),
+      date: { gte: startDate, lte: endDate },
+    },
   });
   const leaves = await prisma.leaveRequest.findMany({
     where: {
+      ...(empId ? { empId } : {}),
       status: { not: "rejected" },
       OR: [{ startDate: { lte: endDate }, endDate: { gte: startDate } }],
     },
   });
   const wfhRecords = await prisma.wfhRecord.findMany({
-    where: { date: { gte: startDate, lte: endDate }, status: { not: "rejected" } },
+    where: {
+      ...(empId ? { empId } : {}),
+      date: { gte: startDate, lte: endDate },
+      status: { not: "rejected" },
+    },
   });
 
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const fontThai = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  const page = pdfDoc.addPage([842, 595]);
-  const { width } = page.getSize();
-
-  page.drawText("Attendance Summary Report", {
-    x: 50,
-    y: 550,
-    size: 18,
-    font: fontBold,
-    color: rgb(0.1, 0.1, 0.3),
-  });
-
-  page.drawText(`${startDate} to ${endDate}`, {
-    x: 50,
-    y: 528,
-    size: 10,
-    font,
-    color: rgb(0.4, 0.4, 0.4),
-  });
-
-  const headers = ["No.", "Name", "Group", "Late", "Absent", "Leave", "WFH", "Work Days"];
-  const colX = [50, 80, 250, 300, 345, 390, 435, 490];
-  const colW = [30, 170, 50, 45, 45, 45, 55, 80];
-
-  let y = 500;
-  headers.forEach((h, i) => {
-    page.drawRectangle({
-      x: colX[i],
-      y: y - 5,
-      width: colW[i],
-      height: 18,
-      color: rgb(0.15, 0.2, 0.35),
-    });
-    page.drawText(h, {
-      x: colX[i] + 4,
-      y: y,
-      size: 8,
-      font: fontBold,
-      color: rgb(1, 1, 1),
-    });
-  });
-
-  y -= 25;
+  const PAGE_WIDTH = 842;
+  const PAGE_HEIGHT = 595;
+  const MARGIN_TOP = 50;
+  const MARGIN_BOTTOM = 50;
+  const ROW_HEIGHT = 20;
+  const HEADER_HEIGHT = 18;
 
   const allDates: string[] = [];
   const current = new Date(startDate);
@@ -941,8 +915,44 @@ export async function generateAttendanceReportPdf(
     current.setDate(current.getDate() + 1);
   }
 
+  function addPage(): { page: ReturnType<typeof pdfDoc.addPage>; y: number } {
+    const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    let y = PAGE_HEIGHT - MARGIN_TOP;
+
+    page.drawText("Attendance Summary Report", {
+      x: 50, y, size: 16, font: fontBold, color: rgb(0.1, 0.1, 0.3),
+    });
+    y -= 20;
+    page.drawText(`${startDate} to ${endDate}${empId ? " (Individual)" : ""}`, {
+      x: 50, y, size: 10, font, color: rgb(0.4, 0.4, 0.4),
+    });
+    y -= 25;
+
+    const headers = ["No.", "Name", "Group", "Late", "Absent", "Leave", "WFH", "Work Days"];
+    const colX = [50, 80, 230, 310, 360, 410, 460, 520];
+    const colW = [30, 150, 80, 50, 50, 50, 60, 80];
+
+    page.drawRectangle({
+      x: 50, y: y - 5, width: PAGE_WIDTH - 100, height: HEADER_HEIGHT,
+      color: rgb(0.15, 0.2, 0.35),
+    });
+    headers.forEach((h, i) => {
+      page.drawText(h, {
+        x: colX[i] + 4, y, size: 8, font: fontBold, color: rgb(1, 1, 1),
+      });
+    });
+    y -= 25;
+
+    return { page, y };
+  }
+
+  let { page, y } = addPage();
+  const colX = [50, 80, 230, 310, 360, 410, 460, 520];
+
   employees.forEach((emp, idx) => {
-    if (y < 50) return;
+    if (y < MARGIN_BOTTOM + ROW_HEIGHT) {
+      ({ page, y } = addPage());
+    }
 
     const empRecords = records.filter((r) => r.empId === emp.id);
     const empLeaves = leaves.filter((l) => l.empId === emp.id);
@@ -970,38 +980,25 @@ export async function generateAttendanceReportPdf(
     const wfhDays = empWfh.length;
     const workDays = allDates.length - absentDays - leaveDays;
 
-    const rowData = [
-      String(idx + 1),
-      emp.name,
-      emp.groupType,
-      String(lateDays),
-      String(absentDays),
-      String(leaveDays),
-      String(wfhDays),
-      String(workDays),
-    ];
-
     if (idx % 2 === 0) {
       page.drawRectangle({
-        x: 50,
-        y: y - 5,
-        width: width - 100,
-        height: 18,
+        x: 50, y: y - 5, width: PAGE_WIDTH - 100, height: ROW_HEIGHT,
         color: rgb(0.95, 0.95, 0.97),
       });
     }
 
+    const rowData = [
+      String(idx + 1), emp.name, emp.groupType,
+      String(lateDays), String(absentDays), String(leaveDays),
+      String(wfhDays), String(workDays),
+    ];
     rowData.forEach((text, i) => {
       page.drawText(text, {
-        x: colX[i] + 4,
-        y: y,
-        size: 8,
-        font,
-        color: rgb(0.1, 0.1, 0.1),
+        x: colX[i] + 4, y, size: 8, font, color: rgb(0.1, 0.1, 0.1),
       });
     });
 
-    y -= 20;
+    y -= ROW_HEIGHT;
   });
 
   const pdfBytes = await pdfDoc.save();
