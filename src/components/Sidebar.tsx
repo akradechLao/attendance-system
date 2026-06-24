@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 
 const employeeNavItems = [
@@ -24,7 +24,6 @@ const adminNavItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -46,13 +45,11 @@ export default function Sidebar() {
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    setIsLoggedIn(false);
-    router.push("/login");
-    router.refresh();
+    window.location.href = "/login";
   };
 
   const handleLogin = () => {
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   return (

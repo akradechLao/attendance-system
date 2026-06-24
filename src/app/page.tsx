@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { getAllEmployees, getTodayAttendance, getSundayMissingAfternoon, getSaturdayShiftCount } from "@/lib/actions";
 import { getUpcomingLeaves } from "@/lib/leave-actions";
 import { getSaturdayDate, isTodaySunday } from "@/lib/business-rules";
@@ -41,7 +40,6 @@ interface LeaveRecord {
 }
 
 export default function HRDashboard() {
-  const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord[]>([]);
   const [sundayMissing, setSundayMissing] = useState<AttendanceRecord[]>([]);
@@ -52,8 +50,7 @@ export default function HRDashboard() {
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    window.location.href = "/login";
   };
 
   useEffect(() => {

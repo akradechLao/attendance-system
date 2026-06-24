@@ -25,8 +25,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (data.success) {
-        router.push(data.redirect);
-        router.refresh();
+        window.location.href = data.redirect;
       } else {
         setError(data.message);
       }
