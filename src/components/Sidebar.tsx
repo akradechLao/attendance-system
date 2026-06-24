@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const navItems = [
+const employeeNavItems = [
+  { href: "/employee", label: "เช็คอิน-ออก", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
+];
+
+const adminNavItems = [
   { href: "/", label: "แดชบอร์ด HR", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
   { href: "/employee", label: "เช็คอิน-ออก", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
   { href: "/employees", label: "จัดการข้อมูลพนักงาน", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
@@ -22,11 +26,33 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        setIsLoggedIn(data.loggedIn);
+        setChecking(false);
+      })
+      .catch(() => {
+        setIsLoggedIn(false);
+        setChecking(false);
+      });
+  }, []);
+
+  const navItems = isLoggedIn ? adminNavItems : employeeNavItems;
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
+    setIsLoggedIn(false);
     router.push("/login");
     router.refresh();
+  };
+
+  const handleLogin = () => {
+    router.push("/login");
   };
 
   return (
@@ -101,15 +127,27 @@ export default function Sidebar() {
           })}
         </nav>
         <div className="border-t border-white/10 p-4 space-y-3">
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-all duration-200"
-          >
-            <svg className="h-5 w-5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            ออกจากระบบ
-          </button>
+          {isLoggedIn ? (
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-all duration-200"
+            >
+              <svg className="h-5 w-5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              ออกจากระบบ
+            </button>
+          ) : (
+            <button
+              onClick={handleLogin}
+              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium gradient-gold text-navy hover:opacity-90 transition-all duration-200"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              เข้าสู่ระบบ Admin
+            </button>
+          )}
           <div className="text-center text-xs text-white/40">
             ระบบบันทึกเวลาเข้า-ออกงาน v1.0
           </div>

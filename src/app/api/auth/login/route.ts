@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set(SESSION_COOKIE, SESSION_SECRET, {
       httpOnly: true,
-      secure: false,
+      secure: true,
       sameSite: "lax",
       maxAge: 60 * 60 * 24,
       path: "/",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { getAllEmployees, getTodayAttendance, getSundayMissingAfternoon, getSaturdayShiftCount } from "@/lib/actions";
 import { getUpcomingLeaves } from "@/lib/leave-actions";
 import { getSaturdayDate, isTodaySunday } from "@/lib/business-rules";
@@ -40,6 +41,7 @@ interface LeaveRecord {
 }
 
 export default function HRDashboard() {
+  const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord[]>([]);
   const [sundayMissing, setSundayMissing] = useState<AttendanceRecord[]>([]);
@@ -47,6 +49,12 @@ export default function HRDashboard() {
   const [upcomingLeaves, setUpcomingLeaves] = useState<LeaveRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState(false);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -125,12 +133,23 @@ export default function HRDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-1.5 gradient-gold rounded-full" />
-        <div>
-          <h1 className="text-2xl font-bold text-navy">แดชบอร์ด HR</h1>
-          <p className="mt-0.5 text-sm text-navy/50">ภาพรวมการเข้างานของพนักงาน</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-1.5 gradient-gold rounded-full" />
+          <div>
+            <h1 className="text-2xl font-bold text-navy">แดชบอร์ด HR</h1>
+            <p className="mt-0.5 text-sm text-navy/50">ภาพรวมการเข้างานของพนักงาน</p>
+          </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          ออกจากระบบ
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
