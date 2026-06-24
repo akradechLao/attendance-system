@@ -5,7 +5,6 @@ import {
   getAttendanceStats,
   getEmployeeAttendanceHistory,
   getOtSummary,
-  generateAttendanceReportPdf,
 } from "@/lib/actions";
 import { LEAVE_TYPES } from "@/lib/leave-constants";
 
@@ -93,23 +92,29 @@ export default function ReportsPage() {
   async function handleExportPdf() {
     setExportingPdf(true);
     try {
-      const empIdParam = pdfExportEmpId || undefined;
-      const pdfDataUrl = await generateAttendanceReportPdf(startDate, endDate, empIdParam);
-      
-      if (!pdfDataUrl || !pdfDataUrl.startsWith("data:application/pdf;base64,")) {
-        throw new Error("Invalid PDF data");
+      const params = new URLSearchParams({ startDate, endDate });
+      if (pdfExportEmpId) params.set("empId", String(pdfExportEmpId));
+
+      const res = await fetch(`/api/reports/pdf?${params.toString()}`);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || `HTTP ${res.status}`);
       }
 
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
       const empName = pdfExportEmpId
         ? stats.find((s) => s.empId === pdfExportEmpId)?.name || "employee"
         : "all-employees";
-      
+
       const link = document.createElement("a");
-      link.href = pdfDataUrl;
+      link.href = url;
       link.download = `attendance-${empName}-${startDate}-to-${endDate}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("PDF export error:", error);
       alert("เกิดข้อผิดพลาดในการสร้าง PDF: " + (error instanceof Error ? error.message : String(error)));
