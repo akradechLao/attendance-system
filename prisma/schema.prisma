@@ -36,6 +36,7 @@ model Employee {
   attendanceLogs    AttendanceLog[]
   shiftSchedules    ShiftSchedule[]
   leaveRequests     LeaveRequest[]
+  wfhRecords        WfhRecord[]
 
   @@map("employees")
 }
@@ -84,6 +85,20 @@ model LeaveRequest {
   employee Employee @relation(fields: [empId], references: [id])
 
   @@map("leave_requests")
+}
+
+model WfhRecord {
+  id        Int      @id @default(autoincrement())
+  empId     Int      @map("emp_id")
+  date      String
+  reason    String   @default("")
+  status    String   @default("approved") // approved | pending | rejected
+  createdAt DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [empId], references: [id])
+
+  @@unique([empId, date])
+  @@map("wfh_records")
 }
 
 model OfficeLocation {

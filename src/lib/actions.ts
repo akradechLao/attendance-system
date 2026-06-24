@@ -59,33 +59,41 @@ export async function checkIn(
       return { success: false, message: "ไม่พบพนักงาน" };
     }
 
-    const officeLocation = await getActiveOfficeLocation();
-    let distanceInfo: string | undefined;
+    const now = getThaiTime();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-    if (officeLocation && latLong && latLong !== "GPS not available") {
-      const userLocation = parseLatLong(latLong);
-      if (userLocation) {
-        const locationCheck = checkLocation(
-          userLocation.lat,
-          userLocation.lon,
-          officeLocation.latitude,
-          officeLocation.longitude,
-          officeLocation.radiusMeters
-        );
-        distanceInfo = formatDistanceInfo(locationCheck.distanceMeters, officeLocation.name);
+    const wfhRecord = await prisma.wfhRecord.findUnique({
+      where: { empId_date: { empId, date: today } },
+    });
+    const isWfh = wfhRecord !== null && wfhRecord.status !== "rejected";
 
-        if (!locationCheck.withinRadius) {
-          return {
-            success: false,
-            message: `เช็คอินไม่สำเร็จ - ${locationCheck.message}`,
-            distanceInfo,
-          };
+    if (!isWfh) {
+      const officeLocation = await getActiveOfficeLocation();
+      let distanceInfo: string | undefined;
+
+      if (officeLocation && latLong && latLong !== "GPS not available") {
+        const userLocation = parseLatLong(latLong);
+        if (userLocation) {
+          const locationCheck = checkLocation(
+            userLocation.lat,
+            userLocation.lon,
+            officeLocation.latitude,
+            officeLocation.longitude,
+            officeLocation.radiusMeters
+          );
+          distanceInfo = formatDistanceInfo(locationCheck.distanceMeters, officeLocation.name);
+
+          if (!locationCheck.withinRadius) {
+            return {
+              success: false,
+              message: `เช็คอินไม่สำเร็จ - ${locationCheck.message}`,
+              distanceInfo,
+            };
+          }
         }
       }
     }
 
-    const now = getThaiTime();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const checkInTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
     const status = getStatus(checkInTime, employee.groupType);
 
@@ -160,27 +168,34 @@ export async function checkOut(
       return { success: false, message: "ยังไม่ได้เช็คอินวันนี้" };
     }
 
-    const officeLocation = await getActiveOfficeLocation();
-    let distanceInfo: string | undefined;
+    const wfhRecord = await prisma.wfhRecord.findUnique({
+      where: { empId_date: { empId, date: today } },
+    });
+    const isWfh = wfhRecord !== null && wfhRecord.status !== "rejected";
 
-    if (officeLocation && latLong && latLong !== "GPS not available") {
-      const userLocation = parseLatLong(latLong);
-      if (userLocation) {
-        const locationCheck = checkLocation(
-          userLocation.lat,
-          userLocation.lon,
-          officeLocation.latitude,
-          officeLocation.longitude,
-          officeLocation.radiusMeters
-        );
-        distanceInfo = formatDistanceInfo(locationCheck.distanceMeters, officeLocation.name);
+    if (!isWfh) {
+      const officeLocation = await getActiveOfficeLocation();
+      let distanceInfo: string | undefined;
 
-        if (!locationCheck.withinRadius) {
-          return {
-            success: false,
-            message: `เช็คเอาท์ไม่สำเร็จ - ${locationCheck.message}`,
-            distanceInfo,
-          };
+      if (officeLocation && latLong && latLong !== "GPS not available") {
+        const userLocation = parseLatLong(latLong);
+        if (userLocation) {
+          const locationCheck = checkLocation(
+            userLocation.lat,
+            userLocation.lon,
+            officeLocation.latitude,
+            officeLocation.longitude,
+            officeLocation.radiusMeters
+          );
+          distanceInfo = formatDistanceInfo(locationCheck.distanceMeters, officeLocation.name);
+
+          if (!locationCheck.withinRadius) {
+            return {
+              success: false,
+              message: `เช็คเอาท์ไม่สำเร็จ - ${locationCheck.message}`,
+              distanceInfo,
+            };
+          }
         }
       }
     }
@@ -309,4 +324,129 @@ export async function addShift(
   } catch (error) {
     return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
   }
+}
+
+export async function createEmployee(
+  name: string,
+  groupType: "A" | "B",
+  wfhQuota: number,
+  preferredOffDay: string | null
+) {
+  try {
+    await prisma.employee.create({
+      data: { name, groupType, wfhQuota, preferredOffDay },
+    });
+    revalidatePath("/employees");
+    revalidatePath("/");
+    return { success: true, message: "เพิ่มพนักงานสำเร็จ" };
+  } catch (error) {
+    return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function updateEmployee(
+  id: number,
+  name: string,
+  groupType: "A" | "B",
+  wfhQuota: number,
+  preferredOffDay: string | null
+) {
+  try {
+    await prisma.employee.update({
+      where: { id },
+      data: { name, groupType, wfhQuota, preferredOffDay },
+    });
+    revalidatePath("/employees");
+    revalidatePath("/");
+    return { success: true, message: "แก้ไขพนักงานสำเร็จ" };
+  } catch (error) {
+    return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function deleteEmployee(id: number) {
+  try {
+    await prisma.employee.delete({ where: { id } });
+    revalidatePath("/employees");
+    revalidatePath("/");
+    return { success: true, message: "ลบพนักงานสำเร็จ" };
+  } catch (error) {
+    return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function requestWfh(empId: number, date: string, reason: string) {
+  try {
+    const now = getThaiTime();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    const monthRecords = await prisma.wfhRecord.findMany({
+      where: {
+        empId,
+        date: { startsWith: month },
+        status: { not: "rejected" },
+      },
+    });
+
+    if (monthRecords.length >= 1) {
+      return { success: false, message: "ใช้สิทธิ์ WFH ครบ 1 วัน/เดือนแล้ว" };
+    }
+
+    const existing = await prisma.wfhRecord.findUnique({
+      where: { empId_date: { empId, date } },
+    });
+
+    if (existing) {
+      return { success: false, message: "มีการขอ WFH วันนี้แล้ว" };
+    }
+
+    await prisma.wfhRecord.create({
+      data: { empId, date, reason, status: "approved" },
+    });
+
+    revalidatePath("/wfh");
+    revalidatePath("/employees");
+    return { success: true, message: "ขอ WFH สำเร็จ" };
+  } catch (error) {
+    return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function cancelWfh(id: number) {
+  try {
+    await prisma.wfhRecord.delete({ where: { id } });
+    revalidatePath("/wfh");
+    revalidatePath("/employees");
+    return { success: true, message: "ยกเลิก WFH สำเร็จ" };
+  } catch (error) {
+    return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function getWfhRecords(empId?: number) {
+  const where = empId ? { empId } : {};
+  return prisma.wfhRecord.findMany({
+    where,
+    include: { employee: true },
+    orderBy: { date: "desc" },
+  });
+}
+
+export async function getWfhOfMonth(empId: number) {
+  const now = getThaiTime();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return prisma.wfhRecord.findMany({
+    where: {
+      empId,
+      date: { startsWith: month },
+      status: { not: "rejected" },
+    },
+  });
+}
+
+export async function isWfhDay(empId: number, date: string): Promise<boolean> {
+  const record = await prisma.wfhRecord.findUnique({
+    where: { empId_date: { empId, date } },
+  });
+  return record !== null && record.status !== "rejected";
 }
