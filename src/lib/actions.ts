@@ -865,35 +865,36 @@ export async function generateAttendanceReportPdf(
   endDate: string,
   empId?: number
 ): Promise<string> {
-  const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
+  try {
+    const { PDFDocument, rgb } = await import("pdf-lib");
 
-  const whereClause = empId ? { id: empId } : {};
-  const employees = await prisma.employee.findMany({ where: whereClause, orderBy: { id: "asc" } });
+    const whereClause = empId ? { id: empId } : {};
+    const employees = await prisma.employee.findMany({ where: whereClause, orderBy: { id: "asc" } });
 
-  const records = await prisma.attendanceLog.findMany({
-    where: {
-      ...(empId ? { empId } : {}),
-      date: { gte: startDate, lte: endDate },
-    },
-  });
-  const leaves = await prisma.leaveRequest.findMany({
-    where: {
-      ...(empId ? { empId } : {}),
+    const records = await prisma.attendanceLog.findMany({
+      where: {
+        ...(empId ? { empId } : {}),
+        date: { gte: startDate, lte: endDate },
+      },
+    });
+    const leaves = await prisma.leaveRequest.findMany({
+      where: {
+        ...(empId ? { empId } : {}),
+        status: { not: "rejected" },
+        OR: [{ startDate: { lte: endDate }, endDate: { gte: startDate } }],
+      },
+    });
+    const wfhRecords = await prisma.wfhRecord.findMany({
+      where: {
+        ...(empId ? { empId } : {}),
+        date: { gte: startDate, lte: endDate },
       status: { not: "rejected" },
-      OR: [{ startDate: { lte: endDate }, endDate: { gte: startDate } }],
-    },
-  });
-  const wfhRecords = await prisma.wfhRecord.findMany({
-    where: {
-      ...(empId ? { empId } : {}),
-      date: { gte: startDate, lte: endDate },
-      status: { not: "rejected" },
     },
   });
 
-  const pdfDoc = await PDFDocument.create();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont("Helvetica");
+    const fontBold = await pdfDoc.embedFont("Helvetica-Bold");
 
   const PAGE_WIDTH = 842;
   const PAGE_HEIGHT = 595;
@@ -1003,6 +1004,10 @@ export async function generateAttendanceReportPdf(
   const pdfBytes = await pdfDoc.save();
   const base64 = Buffer.from(pdfBytes).toString("base64");
   return `data:application/pdf;base64,${base64}`;
+  } catch (error) {
+    console.error("PDF generation error:", error);
+    throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 // ===== ONBOARDING ACTIONS =====
