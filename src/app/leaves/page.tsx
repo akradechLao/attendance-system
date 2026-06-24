@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getAllEmployees } from "@/lib/actions";
 import { createLeave, getAllLeaves, deleteLeave, LeaveRecord } from "@/lib/leave-actions";
-import { LEAVE_TYPES } from "@/lib/leave-constants";
+import { LEAVE_TYPES, TOTAL_LEAVE_QUOTAS } from "@/lib/leave-constants";
 
 interface Employee {
   id: number;
@@ -26,6 +26,26 @@ export default function LeaveManagement() {
     getAllEmployees().then(setEmployees).catch(() => {});
     getAllLeaves().then(setLeaves).catch(() => {});
   }, []);
+
+  const currentYear = new Date().getFullYear();
+
+  const leaveUsage = useMemo(() => {
+    const usage: Record<number, Record<string, number>> = {};
+    for (const leave of leaves) {
+      const leaveYear = new Date(leave.startDate).getFullYear();
+      if (leaveYear !== currentYear) continue;
+      if (!usage[leave.empId]) usage[leave.empId] = {};
+      const lStart = new Date(Math.max(new Date(leave.startDate).getTime(), new Date(currentYear, 0, 1).getTime()));
+      const lEnd = new Date(Math.min(new Date(leave.endDate).getTime(), new Date(currentYear, 11, 31).getTime()));
+      const days = Math.ceil((lEnd.getTime() - lStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      if (days > 0) {
+        usage[leave.empId][leave.leaveType] = (usage[leave.empId][leave.leaveType] || 0) + days;
+      }
+    }
+    return usage;
+  }, [leaves, currentYear]);
+
+  const selectedEmpLeaveUsage = selectedEmpId ? (leaveUsage[selectedEmpId] || {}) : {};
 
   const handleSubmit = async () => {
     if (!selectedEmpId || !reason.trim()) {
@@ -83,6 +103,29 @@ export default function LeaveManagement() {
                 ))}
               </select>
             </div>
+
+            {selectedEmpId && (
+              <div className="rounded-lg bg-cream/50 p-3">
+                <p className="text-xs font-medium text-navy/60 mb-2">สิทธิ์ลาปี {currentYear}</p>
+                <div className="space-y-1">
+                  {Object.entries(TOTAL_LEAVE_QUOTAS).map(([type, quota]) => {
+                    const used = selectedEmpLeaveUsage[type] || 0;
+                    const remaining = quota - used;
+                    const typeInfo = LEAVE_TYPES[type];
+                    if (!typeInfo) return null;
+                    return (
+                      <div key={type} className="flex items-center justify-between text-xs">
+                        <span className={`${typeInfo.color} rounded-full px-1.5 py-0.5 font-medium`}>{typeInfo.label}</span>
+                        <span className={remaining > 0 ? "text-green-600" : "text-red-500"}>
+                          {used}/{quota} วัน
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-navy/70">ประเภทลา</label>
               <select
@@ -153,6 +196,9 @@ export default function LeaveManagement() {
             <div className="space-y-3">
               {leaves.map((leave) => {
                 const typeInfo = LEAVE_TYPES[leave.leaveType] || { label: leave.leaveType, color: "bg-gray-100 text-gray-800" };
+                const lStart = new Date(leave.startDate);
+                const lEnd = new Date(leave.endDate);
+                const days = Math.ceil((lEnd.getTime() - lStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
                 return (
                   <div key={leave.id} className="flex items-start gap-3 rounded-lg border border-cream-dark p-4 hover:bg-cream/50 transition-colors">
                     <div className="flex-1">
@@ -161,6 +207,7 @@ export default function LeaveManagement() {
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${typeInfo.color}`}>
                           {typeInfo.label}
                         </span>
+                        <span className="text-xs text-navy/40">{days} วัน</span>
                       </div>
                       <p className="mt-1 text-sm text-navy/60">
                         {leave.startDate} - {leave.endDate}
