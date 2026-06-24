@@ -884,13 +884,18 @@ export async function generateAttendanceReportPdf(
         OR: [{ startDate: { lte: endDate }, endDate: { gte: startDate } }],
       },
     });
-    const wfhRecords = await prisma.wfhRecord.findMany({
-      where: {
-        ...(empId ? { empId } : {}),
-        date: { gte: startDate, lte: endDate },
-      status: { not: "rejected" },
-    },
-  });
+    let wfhRecords: { empId: number; date: string }[] = [];
+    try {
+      wfhRecords = await prisma.wfhRecord.findMany({
+        where: {
+          ...(empId ? { empId } : {}),
+          date: { gte: startDate, lte: endDate },
+          status: { not: "rejected" },
+        },
+      });
+    } catch {
+      wfhRecords = [];
+    }
 
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont("Helvetica");
