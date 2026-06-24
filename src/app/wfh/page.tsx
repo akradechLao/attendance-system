@@ -59,15 +59,6 @@ export default function WfhPage() {
     setTimeout(() => setMessage({ text: "", type: null }), 3000);
   }
 
-  function getNextSaturday(): string {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = day === 6 ? 0 : 6 - day;
-    const sat = new Date(now);
-    sat.setDate(now.getDate() + diff);
-    return `${sat.getFullYear()}-${String(sat.getMonth() + 1).padStart(2, "0")}-${String(sat.getDate()).padStart(2, "0")}`;
-  }
-
   async function handleRequest(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedEmp) {
@@ -163,7 +154,6 @@ export default function WfhPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                min={getNextSaturday()}
                 className="mt-1 w-full rounded-lg border border-cream-dark bg-cream/50 px-4 py-2.5 text-navy focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
               />
             </div>
