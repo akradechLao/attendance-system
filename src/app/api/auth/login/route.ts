@@ -44,9 +44,11 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch {
+  } catch (error) {
+    console.error("Login error:", error);
+    const msg = error instanceof Error ? error.message : "unknown";
     return NextResponse.json(
-      { success: false, message: "เกิดข้อผิดพลาด" },
+      { success: false, message: "เกิดข้อผิดพลาด", error: msg },
       { status: 500 }
     );
   }
