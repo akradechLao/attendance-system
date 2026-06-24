@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+
+const MapPicker = dynamic(() => import("@/components/MapPicker"), {
+  ssr: false,
+  loading: () => <div className="h-[400px] bg-cream-dark rounded-xl animate-pulse" />,
+});
 
 interface OfficeLocation {
   id: number;
@@ -170,7 +176,7 @@ export default function SettingsPage() {
           <div className="h-10 w-1.5 gradient-gold rounded-full" />
           <div>
             <h1 className="text-2xl font-bold text-navy">ตั้งค่าตำแหน่งออฟฟิศ</h1>
-            <p className="mt-0.5 text-sm text-navy/50">จัดการตำแหน่งอ้างอิงสำหรับเช็คอิน-ออก (รัศมี 200 เมตร)</p>
+            <p className="mt-0.5 text-sm text-navy/50">จัดการตำแหน่งอ้างอิงสำหรับเช็คอิน-ออก (คลิกเลือกตำแหน่งบนแผนที่)</p>
           </div>
         </div>
         <button
@@ -242,6 +248,32 @@ export default function SettingsPage() {
                 พิกัดปัจจุบัน: {parseFloat(latitude).toFixed(6)}, {parseFloat(longitude).toFixed(6)}
               </span>
             )}
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-navy/70 mb-2">คลิกเลือกตำแหน่งบนแผนที่</label>
+            <div className="rounded-xl overflow-hidden border border-cream-dark">
+              <MapPicker
+                latitude={latitude ? parseFloat(latitude) : 12.9763}
+                longitude={longitude ? parseFloat(longitude) : 100.8876}
+                onSelect={(lat, lng) => {
+                  setLatitude(String(lat.toFixed(6)));
+                  setLongitude(String(lng.toFixed(6)));
+                }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-navy/40">
+              📍 ตำแหน่งอ้างอิง: Laem Chabang, Si Racha, Chon Buri (
+              <a
+                href="https://www.google.com/maps?q=12.9763,100.8876"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gold-dark hover:underline"
+              >
+                12.9763, 100.8876
+              </a>
+              )
+            </p>
           </div>
 
           <div className="mt-6 flex gap-3">
