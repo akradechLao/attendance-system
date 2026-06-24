@@ -867,6 +867,7 @@ export async function generateAttendanceReportPdf(
 ): Promise<string> {
   try {
     const { PDFDocument, rgb } = await import("pdf-lib");
+    const fontkit = (await import("@pdf-lib/fontkit")).default;
 
     const whereClause = empId ? { id: empId } : {};
     const employees = await prisma.employee.findMany({ where: whereClause, orderBy: { id: "asc" } });
@@ -905,6 +906,7 @@ export async function generateAttendanceReportPdf(
     const boldBytes = fs.readFileSync(boldPath);
 
     const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
     const font = await pdfDoc.embedFont(regularBytes);
     const fontBold = await pdfDoc.embedFont(boldBytes);
 

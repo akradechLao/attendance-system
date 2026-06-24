@@ -6,6 +6,7 @@ import path from "path";
 export async function GET(request: NextRequest) {
   try {
     const { PDFDocument, rgb } = await import("pdf-lib");
+    const fontkit = (await import("@pdf-lib/fontkit")).default;
 
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get("startDate");
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
     const boldBytes = fs.readFileSync(boldPath);
 
     const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
     const font = await pdfDoc.embedFont(regularBytes);
     const fontBold = await pdfDoc.embedFont(boldBytes);
 
