@@ -479,6 +479,7 @@ export interface EmployeeStats {
   onTimeDays: number;
   absentDays: number;
   leaveDays: number;
+  leaveDetails: Record<string, number>;
   wfhDays: number;
   totalWorkHours: number;
   avgCheckIn: string;
@@ -558,7 +559,18 @@ export async function getAttendanceStats(
     const lateDays = empAttendance.filter((a) => a.status === "late").length;
     const onTimeDays = empAttendance.filter((a) => a.status === "on_time").length;
     const wfhDays = empWfh.length;
-    const leaveDays = empLeaves.length;
+
+    const leaveDetails: Record<string, number> = {};
+    let leaveDays = 0;
+    for (const l of empLeaves) {
+      const lStart = new Date(Math.max(new Date(l.startDate).getTime(), new Date(startDate).getTime()));
+      const lEnd = new Date(Math.min(new Date(l.endDate).getTime(), new Date(endDate).getTime()));
+      const days = Math.ceil((lEnd.getTime() - lStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      if (days > 0) {
+        leaveDays += days;
+        leaveDetails[l.leaveType] = (leaveDetails[l.leaveType] || 0) + days;
+      }
+    }
 
     const attendedDates = new Set(empAttendance.map((a) => a.date));
     const wfhDates = new Set(empWfh.map((w) => w.date));
@@ -597,6 +609,7 @@ export async function getAttendanceStats(
       onTimeDays,
       absentDays: Math.max(0, absentDays - leaveDays),
       leaveDays,
+      leaveDetails,
       wfhDays,
       totalWorkHours: Math.round(totalWorkHours * 100) / 100,
       avgCheckIn,

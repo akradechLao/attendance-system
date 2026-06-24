@@ -7,6 +7,7 @@ import {
   getOtSummary,
   generateAttendanceReportPdf,
 } from "@/lib/actions";
+import { LEAVE_TYPES } from "@/lib/leave-constants";
 
 interface EmployeeStats {
   empId: number;
@@ -17,6 +18,7 @@ interface EmployeeStats {
   onTimeDays: number;
   absentDays: number;
   leaveDays: number;
+  leaveDetails: Record<string, number>;
   wfhDays: number;
   totalWorkHours: number;
   avgCheckIn: string;
@@ -113,6 +115,13 @@ export default function ReportsPage() {
   const totalOtHours = otSummary.reduce((s, e) => s + e.totalOtHours, 0);
   const totalOtDays = otSummary.reduce((s, e) => s + e.otDays, 0);
 
+  const totalLeaveByType: Record<string, number> = {};
+  for (const emp of stats) {
+    for (const [type, days] of Object.entries(emp.leaveDetails)) {
+      totalLeaveByType[type] = (totalLeaveByType[type] || 0) + days;
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -181,6 +190,15 @@ export default function ReportsPage() {
           <p className="text-sm text-blue-600 font-medium">ลางาน</p>
           <p className="text-2xl font-bold text-blue-600 mt-1">{totalLeave}</p>
           <p className="text-xs text-blue-400">วัน</p>
+          {Object.keys(totalLeaveByType).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {Object.entries(totalLeaveByType).map(([type, days]) => (
+                <span key={type} className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${LEAVE_TYPES[type]?.color || "bg-gray-100 text-gray-800"}`}>
+                  {LEAVE_TYPES[type]?.label || type} {days}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="rounded-xl border-l-4 border-l-green-400 bg-green-50 p-4">
           <p className="text-sm text-green-600 font-medium">WFH</p>
@@ -263,8 +281,19 @@ export default function ReportsPage() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-green-600 font-medium">{emp.onTimeDays}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-red-600 font-medium">{emp.lateDays}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-orange-600 font-medium">{emp.absentDays}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-blue-600 font-medium">{emp.leaveDays}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-orange-600 font-medium">{emp.absentDays}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-blue-600 font-medium">
+                      <div>{emp.leaveDays}</div>
+                      {Object.keys(emp.leaveDetails).length > 0 && (
+                        <div className="flex flex-wrap gap-0.5 justify-center mt-1">
+                          {Object.entries(emp.leaveDetails).map(([type, days]) => (
+                            <span key={type} className={`inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${LEAVE_TYPES[type]?.color || "bg-gray-100 text-gray-800"}`}>
+                              {LEAVE_TYPES[type]?.label || type} {days}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                       <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-green-600 font-medium">{emp.wfhDays}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-navy/70">{emp.totalWorkHours} ชม.</td>
                       <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-navy/70">{emp.avgCheckIn}</td>
