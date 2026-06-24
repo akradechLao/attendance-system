@@ -6,7 +6,7 @@ import {
   createEmployee,
   updateEmployee,
   deleteEmployee,
-  getWfhOfMonth,
+  getWfhOfMonthBulk,
 } from "@/lib/actions";
 
 interface Employee {
@@ -44,18 +44,11 @@ export default function EmployeesPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const emps = await getAllEmployees();
+      const [emps, usage] = await Promise.all([
+        getAllEmployees(),
+        getWfhOfMonthBulk(),
+      ]);
       setEmployees(emps);
-
-      const usage: Record<number, number> = {};
-      for (const emp of emps) {
-        try {
-          const records = await getWfhOfMonth(emp.id);
-          usage[emp.id] = records.length;
-        } catch {
-          usage[emp.id] = 0;
-        }
-      }
       setWfhUsage(usage);
     } catch (error) {
       console.error("Load error:", error);

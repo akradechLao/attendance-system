@@ -6,7 +6,7 @@ import {
   requestWfh,
   cancelWfh,
   getWfhRecords,
-  getWfhOfMonth,
+  getWfhOfMonthBulk,
 } from "@/lib/actions";
 
 interface Employee {
@@ -39,15 +39,13 @@ export default function WfhPage() {
 
   async function loadData() {
     setLoading(true);
-    const [emps, recs] = await Promise.all([getAllEmployees(), getWfhRecords()]);
+    const [emps, recs, usage] = await Promise.all([
+      getAllEmployees(),
+      getWfhRecords(),
+      getWfhOfMonthBulk(),
+    ]);
     setEmployees(emps);
     setRecords(recs);
-
-    const usage: Record<number, number> = {};
-    for (const emp of emps) {
-      const monthRecords = await getWfhOfMonth(emp.id);
-      usage[emp.id] = monthRecords.length;
-    }
     setWfhUsage(usage);
     setLoading(false);
   }

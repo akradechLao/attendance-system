@@ -446,6 +446,23 @@ export async function getWfhOfMonth(empId: number) {
   });
 }
 
+export async function getWfhOfMonthBulk(): Promise<Record<number, number>> {
+  const now = getThaiTime();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const records = await prisma.wfhRecord.findMany({
+    where: {
+      date: { startsWith: month },
+      status: { not: "rejected" },
+    },
+    select: { empId: true },
+  });
+  const usage: Record<number, number> = {};
+  for (const r of records) {
+    usage[r.empId] = (usage[r.empId] || 0) + 1;
+  }
+  return usage;
+}
+
 export async function isWfhDay(empId: number, date: string): Promise<boolean> {
   const record = await prisma.wfhRecord.findUnique({
     where: { empId_date: { empId, date } },
@@ -507,29 +524,29 @@ export async function getAttendanceStats(
   startDate: string,
   endDate: string
 ): Promise<EmployeeStats[]> {
-  const employees = await prisma.employee.findMany({ orderBy: { id: "asc" } });
   const workDates = getDatesInRange(startDate, endDate);
 
-  const attendance = await prisma.attendanceLog.findMany({
-    where: { date: { gte: startDate, lte: endDate } },
-    include: { employee: true },
-  });
-
-  const leaves = await prisma.leaveRequest.findMany({
-    where: {
-      status: { not: "rejected" },
-      OR: [
-        { startDate: { lte: endDate }, endDate: { gte: startDate } },
-      ],
-    },
-  });
-
-  const wfhRecords = await prisma.wfhRecord.findMany({
-    where: {
-      date: { gte: startDate, lte: endDate },
-      status: { not: "rejected" },
-    },
-  });
+  const [employees, attendance, leaves, wfhRecords] = await Promise.all([
+    prisma.employee.findMany({ orderBy: { id: "asc" } }),
+    prisma.attendanceLog.findMany({
+      where: { date: { gte: startDate, lte: endDate } },
+      include: { employee: true },
+    }),
+    prisma.leaveRequest.findMany({
+      where: {
+        status: { not: "rejected" },
+        OR: [
+          { startDate: { lte: endDate }, endDate: { gte: startDate } },
+        ],
+      },
+    }),
+    prisma.wfhRecord.findMany({
+      where: {
+        date: { gte: startDate, lte: endDate },
+        status: { not: "rejected" },
+      },
+    }),
+  ]);
 
   return employees.map((emp) => {
     const empAttendance = attendance.filter((a) => a.empId === emp.id);
@@ -600,33 +617,33 @@ export async function getEmployeeAttendanceHistory(
   startDate: string,
   endDate: string
 ) {
-  const attendance = await prisma.attendanceLog.findMany({
-    where: {
-      empId,
-      date: { gte: startDate, lte: endDate },
-    },
-    orderBy: { date: "asc" },
-  });
-
-  const wfhRecords = await prisma.wfhRecord.findMany({
-    where: {
-      empId,
-      date: { gte: startDate, lte: endDate },
-      status: { not: "rejected" },
-    },
-    orderBy: { date: "asc" },
-  });
-
-  const leaves = await prisma.leaveRequest.findMany({
-    where: {
-      empId,
-      status: { not: "rejected" },
-      OR: [
-        { startDate: { lte: endDate }, endDate: { gte: startDate } },
-      ],
-    },
-    orderBy: { startDate: "asc" },
-  });
+  const [attendance, wfhRecords, leaves] = await Promise.all([
+    prisma.attendanceLog.findMany({
+      where: {
+        empId,
+        date: { gte: startDate, lte: endDate },
+      },
+      orderBy: { date: "asc" },
+    }),
+    prisma.wfhRecord.findMany({
+      where: {
+        empId,
+        date: { gte: startDate, lte: endDate },
+        status: { not: "rejected" },
+      },
+      orderBy: { date: "asc" },
+    }),
+    prisma.leaveRequest.findMany({
+      where: {
+        empId,
+        status: { not: "rejected" },
+        OR: [
+          { startDate: { lte: endDate }, endDate: { gte: startDate } },
+        ],
+      },
+      orderBy: { startDate: "asc" },
+    }),
+  ]);
 
   const workDates = getDatesInRange(startDate, endDate);
   const attendedDates = new Set(attendance.map((a) => a.date));
