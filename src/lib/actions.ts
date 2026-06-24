@@ -912,10 +912,12 @@ export async function generateAttendanceReportPdf(
 
   const PAGE_WIDTH = 842;
   const PAGE_HEIGHT = 595;
-  const MARGIN_TOP = 50;
-  const MARGIN_BOTTOM = 50;
-  const ROW_HEIGHT = 20;
-  const HEADER_HEIGHT = 18;
+  const MARGIN_TOP = 30;
+  const MARGIN_BOTTOM = 30;
+  const MARGIN_LEFT = 35;
+  const MARGIN_RIGHT = 35;
+  const ROW_HEIGHT = 28;
+  const HEADER_HEIGHT = 24;
 
   const allDates: string[] = [];
   const current = new Date(startDate);
@@ -935,33 +937,35 @@ export async function generateAttendanceReportPdf(
     let y = PAGE_HEIGHT - MARGIN_TOP;
 
     page.drawText("รายงานสรุปการเข้างาน", {
-      x: 50, y, size: 16, font: fontBold, color: rgb(0.1, 0.1, 0.3),
+      x: MARGIN_LEFT, y, size: 22, font: fontBold, color: rgb(0.1, 0.1, 0.3),
     });
-    y -= 20;
+    y -= 28;
     page.drawText(`${startDate} ถึง ${endDate}${empId ? " (รายบุคคล)" : ""}`, {
-      x: 50, y, size: 10, font, color: rgb(0.4, 0.4, 0.4),
+      x: MARGIN_LEFT, y, size: 13, font, color: rgb(0.4, 0.4, 0.4),
     });
-    y -= 25;
+    y -= 30;
 
     const headers = ["ลำดับ", "ชื่อ", "กลุ่ม", "สาย", "ขาด", "ลา", "WFH", "วันทำงาน"];
-    const colX = [50, 80, 230, 310, 360, 410, 460, 520];
+    const usableWidth = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+    const colX = headers.map((_, i) => MARGIN_LEFT + (usableWidth * i) / headers.length);
 
     page.drawRectangle({
-      x: 50, y: y - 5, width: PAGE_WIDTH - 100, height: HEADER_HEIGHT,
+      x: MARGIN_LEFT, y: y - 5, width: usableWidth, height: HEADER_HEIGHT,
       color: rgb(0.15, 0.2, 0.35),
     });
     headers.forEach((h, i) => {
       page.drawText(h, {
-        x: colX[i] + 4, y, size: 8, font: fontBold, color: rgb(1, 1, 1),
+        x: colX[i] + 6, y, size: 11, font: fontBold, color: rgb(1, 1, 1),
       });
     });
-    y -= 25;
+    y -= 30;
 
     return { page, y };
   }
 
   let { page, y } = addPage();
-  const colX = [50, 80, 230, 310, 360, 410, 460, 520];
+  const usableWidth = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+  const colX = Array.from({ length: 8 }, (_, i) => MARGIN_LEFT + (usableWidth * i) / 8);
 
   employees.forEach((emp, idx) => {
     if (y < MARGIN_BOTTOM + ROW_HEIGHT) {
@@ -996,7 +1000,7 @@ export async function generateAttendanceReportPdf(
 
     if (idx % 2 === 0) {
       page.drawRectangle({
-        x: 50, y: y - 5, width: PAGE_WIDTH - 100, height: ROW_HEIGHT,
+        x: MARGIN_LEFT, y: y - 5, width: usableWidth, height: ROW_HEIGHT,
         color: rgb(0.95, 0.95, 0.97),
       });
     }
@@ -1008,7 +1012,7 @@ export async function generateAttendanceReportPdf(
     ];
     rowData.forEach((text, i) => {
       page.drawText(text, {
-        x: colX[i] + 4, y, size: 8, font, color: rgb(0.1, 0.1, 0.1),
+        x: colX[i] + 6, y, size: 11, font, color: rgb(0.1, 0.1, 0.1),
       });
     });
 
