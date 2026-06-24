@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import {
   getAttendanceStats,
   getEmployeeAttendanceHistory,
+  getOtSummary,
+  generateAttendanceReportPdf,
 } from "@/lib/actions";
 
 interface EmployeeStats {
@@ -28,6 +30,15 @@ interface DailyRecord {
   workHours: number | null;
 }
 
+interface OtSummaryItem {
+  empId: number;
+  name: string;
+  groupType: string;
+  totalOtHours: number;
+  otDays: number;
+  details: { date: string; checkOut: string; otHours: number }[];
+}
+
 export default function ReportsPage() {
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -43,11 +54,18 @@ export default function ReportsPage() {
   const [selectedEmp, setSelectedEmp] = useState<number | null>(null);
   const [history, setHistory] = useState<DailyRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [otSummary, setOtSummary] = useState<OtSummaryItem[]>([]);
+  const [activeTab, setActiveTab] = useState<"summary" | "ot">("summary");
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   async function loadStats() {
     setLoading(true);
-    const data = await getAttendanceStats(startDate, endDate);
-    setStats(data);
+    const [statsData, otData] = await Promise.all([
+      getAttendanceStats(startDate, endDate),
+      getOtSummary(startDate, endDate),
+    ]);
+    setStats(statsData);
+    setOtSummary(otData);
     setLoading(false);
   }
 
@@ -69,21 +87,52 @@ export default function ReportsPage() {
     setLoadingHistory(false);
   }
 
+  async function handleExportPdf() {
+    setExportingPdf(true);
+    try {
+      const pdfDataUrl = await generateAttendanceReportPdf(startDate, endDate);
+      const link = document.createElement("a");
+      link.href = pdfDataUrl;
+      link.download = `attendance-report-${startDate}-to-${endDate}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("PDF export error:", error);
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   const selectedEmpData = stats.find((s) => s.empId === selectedEmp);
 
   const totalLate = stats.reduce((s, e) => s + e.lateDays, 0);
   const totalAbsent = stats.reduce((s, e) => s + e.absentDays, 0);
   const totalLeave = stats.reduce((s, e) => s + e.leaveDays, 0);
   const totalWfh = stats.reduce((s, e) => s + e.wfhDays, 0);
+  const totalOtHours = otSummary.reduce((s, e) => s + e.totalOtHours, 0);
+  const totalOtDays = otSummary.reduce((s, e) => s + e.otDays, 0);
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-1.5 gradient-gold rounded-full" />
-        <div>
-          <h1 className="text-2xl font-bold text-navy">รายงานสถิติการเข้างาน</h1>
-          <p className="mt-0.5 text-sm text-navy/50">ดูข้อมูลย้อนหลัง ขาด ลา มาสาย</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-1.5 gradient-gold rounded-full" />
+          <div>
+            <h1 className="text-2xl font-bold text-navy">รายงานสถิติการเข้างาน</h1>
+            <p className="mt-0.5 text-sm text-navy/50">ดูข้อมูลย้อนหลัง ขาด ลา มาสาย OT</p>
+          </div>
         </div>
+        <button
+          onClick={handleExportPdf}
+          disabled={exportingPdf || loading}
+          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          {exportingPdf ? "กำลังสร้าง PDF..." : "ดาวน์โหลด PDF"}
+        </button>
       </div>
 
       <div className="rounded-xl border border-cream-dark bg-white p-6 shadow-gold">
@@ -117,98 +166,183 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border-l-4 border-l-red-500 bg-red-50 p-5">
-          <p className="text-sm text-red-600 font-medium">มาสายทั้งหมด</p>
-          <p className="text-3xl font-bold text-red-600 mt-1">{totalLate}</p>
-          <p className="text-xs text-red-400 mt-1">ครั้ง</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="rounded-xl border-l-4 border-l-red-500 bg-red-50 p-4">
+          <p className="text-sm text-red-600 font-medium">มาสาย</p>
+          <p className="text-2xl font-bold text-red-600 mt-1">{totalLate}</p>
+          <p className="text-xs text-red-400">ครั้ง</p>
         </div>
-        <div className="rounded-xl border-l-4 border-l-orange-400 bg-orange-50 p-5">
+        <div className="rounded-xl border-l-4 border-l-orange-400 bg-orange-50 p-4">
           <p className="text-sm text-orange-600 font-medium">ขาดงาน</p>
-          <p className="text-3xl font-bold text-orange-600 mt-1">{totalAbsent}</p>
-          <p className="text-xs text-orange-400 mt-1">วัน</p>
+          <p className="text-2xl font-bold text-orange-600 mt-1">{totalAbsent}</p>
+          <p className="text-xs text-orange-400">วัน</p>
         </div>
-        <div className="rounded-xl border-l-4 border-l-blue-400 bg-blue-50 p-5">
+        <div className="rounded-xl border-l-4 border-l-blue-400 bg-blue-50 p-4">
           <p className="text-sm text-blue-600 font-medium">ลางาน</p>
-          <p className="text-3xl font-bold text-blue-600 mt-1">{totalLeave}</p>
-          <p className="text-xs text-blue-400 mt-1">วัน</p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">{totalLeave}</p>
+          <p className="text-xs text-blue-400">วัน</p>
         </div>
-        <div className="rounded-xl border-l-4 border-l-green-400 bg-green-50 p-5">
-          <p className="text-sm text-green-600 font-medium">Work From Home</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">{totalWfh}</p>
-          <p className="text-xs text-green-400 mt-1">วัน</p>
+        <div className="rounded-xl border-l-4 border-l-green-400 bg-green-50 p-4">
+          <p className="text-sm text-green-600 font-medium">WFH</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">{totalWfh}</p>
+          <p className="text-xs text-green-400">วัน</p>
+        </div>
+        <div className="rounded-xl border-l-4 border-l-purple-400 bg-purple-50 p-4">
+          <p className="text-sm text-purple-600 font-medium">OT รวม</p>
+          <p className="text-2xl font-bold text-purple-600 mt-1">{totalOtHours}</p>
+          <p className="text-xs text-purple-400">ชม. ({totalOtDays} วัน)</p>
         </div>
       </div>
 
-      <div className="rounded-xl border border-cream-dark bg-white shadow-gold overflow-hidden">
-        <div className="gradient-navy px-6 py-4">
-          <h2 className="text-base font-semibold text-white">สถิติพนักงานแต่ละคน</h2>
-        </div>
-        {loading ? (
-          <div className="p-8 space-y-4 animate-pulse">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-cream-dark rounded-lg" />
-            ))}
-          </div>
-        ) : stats.length === 0 ? (
-          <div className="p-8 text-center text-navy/50">ไม่มีข้อมูลในช่วงวันที่เลือก</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-cream-dark bg-cream/50">
-                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold text-navy/60 uppercase">ชื่อ</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">กลุ่ม</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">มาตรงเวลา</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">มาสาย</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">ขาด</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">ลา</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">WFH</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">ชม.ทำงาน</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">เข้างานเฉลี่ย</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">ดูรายละเอียด</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.map((emp) => (
-                  <tr
-                    key={emp.empId}
-                    className={`border-b border-cream-dark/50 transition-colors ${
-                      selectedEmp === emp.empId ? "bg-gold/10" : "hover:bg-cream/30"
-                    }`}
-                  >
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-navy">{emp.name}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-center">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          emp.groupType === "A" ? "bg-navy/10 text-navy" : "bg-gold/20 text-gold-dark"
-                        }`}
-                      >
-                        {emp.groupType}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-green-600 font-medium">{emp.onTimeDays}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-red-600 font-medium">{emp.lateDays}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-orange-600 font-medium">{emp.absentDays}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-blue-600 font-medium">{emp.leaveDays}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-green-600 font-medium">{emp.wfhDays}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-navy/70">{emp.totalWorkHours} ชม.</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-navy/70">{emp.avgCheckIn}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleViewHistory(emp.empId)}
-                        className="rounded-lg border border-cream-dark px-3 py-1.5 text-xs font-medium text-navy/70 hover:bg-cream transition-colors"
-                      >
-                        ดูรายวัน
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="flex gap-2 border-b border-cream-dark">
+        <button
+          onClick={() => setActiveTab("summary")}
+          className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+            activeTab === "summary"
+              ? "border-gold text-gold-dark"
+              : "border-transparent text-navy/50 hover:text-navy"
+          }`}
+        >
+          สถิติพนักงาน
+        </button>
+        <button
+          onClick={() => setActiveTab("ot")}
+          className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+            activeTab === "ot"
+              ? "border-gold text-gold-dark"
+              : "border-transparent text-navy/50 hover:text-navy"
+          }`}
+        >
+          สรุป OT
+        </button>
       </div>
+
+      {activeTab === "summary" && (
+        <div className="rounded-xl border border-cream-dark bg-white shadow-gold overflow-hidden">
+          <div className="gradient-navy px-6 py-4">
+            <h2 className="text-base font-semibold text-white">สถิติพนักงานแต่ละคน</h2>
+          </div>
+          {loading ? (
+            <div className="p-8 space-y-4 animate-pulse">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-16 bg-cream-dark rounded-lg" />
+              ))}
+            </div>
+          ) : stats.length === 0 ? (
+            <div className="p-8 text-center text-navy/50">ไม่มีข้อมูลในช่วงวันที่เลือก</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-cream-dark bg-cream/50">
+                    <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold text-navy/60 uppercase">ชื่อ</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">กลุ่ม</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">ตรงเวลา</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">สาย</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">ขาด</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">ลา</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">WFH</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">ชม.ทำ</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">เข้าเฉลี่ย</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">รายละเอียด</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.map((emp) => (
+                    <tr
+                      key={emp.empId}
+                      className={`border-b border-cream-dark/50 transition-colors ${
+                        selectedEmp === emp.empId ? "bg-gold/10" : "hover:bg-cream/30"
+                      }`}
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-navy">{emp.name}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${emp.groupType === "A" ? "bg-navy/10 text-navy" : "bg-gold/20 text-gold-dark"}`}>
+                          {emp.groupType}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-green-600 font-medium">{emp.onTimeDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-red-600 font-medium">{emp.lateDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-orange-600 font-medium">{emp.absentDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-blue-600 font-medium">{emp.leaveDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-green-600 font-medium">{emp.wfhDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-navy/70">{emp.totalWorkHours} ชม.</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-navy/70">{emp.avgCheckIn}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleViewHistory(emp.empId)}
+                          className="rounded-lg border border-cream-dark px-3 py-1.5 text-xs font-medium text-navy/70 hover:bg-cream transition-colors"
+                        >
+                          ดูรายวัน
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "ot" && (
+        <div className="rounded-xl border border-cream-dark bg-white shadow-gold overflow-hidden">
+          <div className="gradient-navy px-6 py-4">
+            <h2 className="text-base font-semibold text-white">สรุป OT แต่ละคน</h2>
+          </div>
+          {loading ? (
+            <div className="p-8 space-y-4 animate-pulse">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-16 bg-cream-dark rounded-lg" />
+              ))}
+            </div>
+          ) : otSummary.length === 0 ? (
+            <div className="p-8 text-center text-navy/50">ไม่มีข้อมูล OT</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-cream-dark bg-cream/50">
+                    <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold text-navy/60 uppercase">ชื่อ</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">กลุ่ม</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">วัน OT</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">ชม. OT รวม</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold text-navy/60 uppercase">รายละเอียด</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {otSummary.filter((o) => o.otDays > 0).map((emp) => (
+                    <tr key={emp.empId} className="border-b border-cream-dark/50 hover:bg-cream/30 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-navy">{emp.name}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${emp.groupType === "A" ? "bg-navy/10 text-navy" : "bg-gold/20 text-gold-dark"}`}>
+                          {emp.groupType}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm font-medium text-purple-600">{emp.otDays} วัน</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center text-sm font-bold text-purple-700">{emp.totalOtHours} ชม.</td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {emp.details.map((d, i) => (
+                            <span key={i} className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
+                              {new Date(d.date).toLocaleDateString("th-TH", { day: "numeric", month: "short" })} ({d.otHours} ชม.)
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {otSummary.filter((o) => o.otDays > 0).length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-navy/50">ไม่มีพนักงานที่มี OT ในช่วงนี้</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {selectedEmp && selectedEmpData && (
         <div className="rounded-xl border border-cream-dark bg-white shadow-gold overflow-hidden">
@@ -256,19 +390,13 @@ export default function ReportsPage() {
                         <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-navy/70">{rec.checkOut || "-"}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-navy/70">{rec.workHours !== null ? `${rec.workHours} ชม.` : "-"}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-center">
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                              rec.status === "ตรงเวลา"
-                                ? "bg-green-100 text-green-800"
-                                : rec.status === "สาย"
-                                ? "bg-red-100 text-red-800"
-                                : rec.status === "WFH"
-                                ? "bg-blue-100 text-blue-800"
-                                : rec.status === "ลา"
-                                ? "bg-purple-100 text-purple-800"
-                                : "bg-orange-100 text-orange-800"
-                            }`}
-                          >
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            rec.status === "ตรงเวลา" ? "bg-green-100 text-green-800" :
+                            rec.status === "สาย" ? "bg-red-100 text-red-800" :
+                            rec.status === "WFH" ? "bg-blue-100 text-blue-800" :
+                            rec.status === "ลา" ? "bg-purple-100 text-purple-800" :
+                            "bg-orange-100 text-orange-800"
+                          }`}>
                             {rec.status}
                           </span>
                         </td>

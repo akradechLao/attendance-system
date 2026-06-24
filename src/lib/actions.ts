@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getStatus, isTodaySunday, checkLocation, parseLatLong } from "@/lib/business-rules";
+import { getStatus, isTodaySunday, checkLocation, parseLatLong, calculateOTHours, isWeekend } from "@/lib/business-rules";
 import { revalidatePath } from "next/cache";
 import { sendTelegramPhoto, sendTelegramMessage } from "@/lib/telegram";
 
@@ -799,4 +799,199 @@ export async function getAttendanceWithPhotos(startDate: string, endDate: string
     status: r.status,
     latLong: r.latLong,
   }));
+}
+
+export interface OtSummaryItem {
+  empId: number;
+  name: string;
+  groupType: string;
+  totalOtHours: number;
+  otDays: number;
+  details: { date: string; checkOut: string; otHours: number }[];
+}
+
+export async function getOtSummary(
+  startDate: string,
+  endDate: string
+): Promise<OtSummaryItem[]> {
+  const employees = await prisma.employee.findMany({ orderBy: { id: "asc" } });
+  const records = await prisma.attendanceLog.findMany({
+    where: {
+      date: { gte: startDate, lte: endDate },
+      checkOut: { not: null },
+    },
+  });
+
+  return employees.map((emp) => {
+    const empRecords = records.filter((r) => r.empId === emp.id);
+    const details: { date: string; checkOut: string; otHours: number }[] = [];
+    let totalOtHours = 0;
+
+    for (const r of empRecords) {
+      if (!r.checkOut) continue;
+      const otHours = calculateOTHours(r.checkOut, emp.groupType);
+      if (otHours > 0) {
+        details.push({ date: r.date, checkOut: r.checkOut, otHours });
+        totalOtHours += otHours;
+      }
+    }
+
+    return {
+      empId: emp.id,
+      name: emp.name,
+      groupType: emp.groupType,
+      totalOtHours: Math.round(totalOtHours * 100) / 100,
+      otDays: details.length,
+      details,
+    };
+  });
+}
+
+export async function generateAttendanceReportPdf(
+  startDate: string,
+  endDate: string
+): Promise<string> {
+  const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
+  const employees = await prisma.employee.findMany({ orderBy: { id: "asc" } });
+  const records = await prisma.attendanceLog.findMany({
+    where: { date: { gte: startDate, lte: endDate } },
+    include: { employee: true },
+  });
+  const leaves = await prisma.leaveRequest.findMany({
+    where: {
+      status: { not: "rejected" },
+      OR: [{ startDate: { lte: endDate }, endDate: { gte: startDate } }],
+    },
+  });
+  const wfhRecords = await prisma.wfhRecord.findMany({
+    where: { date: { gte: startDate, lte: endDate }, status: { not: "rejected" } },
+  });
+
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontThai = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const page = pdfDoc.addPage([842, 595]);
+  const { width } = page.getSize();
+
+  page.drawText("Attendance Summary Report", {
+    x: 50,
+    y: 550,
+    size: 18,
+    font: fontBold,
+    color: rgb(0.1, 0.1, 0.3),
+  });
+
+  page.drawText(`${startDate} to ${endDate}`, {
+    x: 50,
+    y: 528,
+    size: 10,
+    font,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+
+  const headers = ["No.", "Name", "Group", "Late", "Absent", "Leave", "WFH", "Work Days"];
+  const colX = [50, 80, 250, 300, 345, 390, 435, 490];
+  const colW = [30, 170, 50, 45, 45, 45, 55, 80];
+
+  let y = 500;
+  headers.forEach((h, i) => {
+    page.drawRectangle({
+      x: colX[i],
+      y: y - 5,
+      width: colW[i],
+      height: 18,
+      color: rgb(0.15, 0.2, 0.35),
+    });
+    page.drawText(h, {
+      x: colX[i] + 4,
+      y: y,
+      size: 8,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+  });
+
+  y -= 25;
+
+  const allDates: string[] = [];
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+  while (current <= end) {
+    const day = current.getDay();
+    if (day !== 0) {
+      allDates.push(
+        `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`
+      );
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  employees.forEach((emp, idx) => {
+    if (y < 50) return;
+
+    const empRecords = records.filter((r) => r.empId === emp.id);
+    const empLeaves = leaves.filter((l) => l.empId === emp.id);
+    const empWfh = wfhRecords.filter((w) => w.empId === emp.id);
+
+    const lateDays = empRecords.filter((r) => r.status === "late").length;
+    const attendedDates = new Set(empRecords.map((r) => r.date));
+    const wfhDates = new Set(empWfh.map((w) => w.date));
+
+    let absentDays = 0;
+    for (const d of allDates) {
+      if (!attendedDates.has(d) && !wfhDates.has(d)) {
+        const isLeave = empLeaves.some((l) => l.startDate <= d && l.endDate >= d);
+        if (!isLeave) absentDays++;
+      }
+    }
+
+    const leaveDays = empLeaves.reduce((sum, l) => {
+      const lStart = new Date(Math.max(new Date(l.startDate).getTime(), new Date(startDate).getTime()));
+      const lEnd = new Date(Math.min(new Date(l.endDate).getTime(), new Date(endDate).getTime()));
+      const diff = Math.ceil((lEnd.getTime() - lStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return sum + Math.max(0, diff);
+    }, 0);
+
+    const wfhDays = empWfh.length;
+    const workDays = allDates.length - absentDays - leaveDays;
+
+    const rowData = [
+      String(idx + 1),
+      emp.name,
+      emp.groupType,
+      String(lateDays),
+      String(absentDays),
+      String(leaveDays),
+      String(wfhDays),
+      String(workDays),
+    ];
+
+    if (idx % 2 === 0) {
+      page.drawRectangle({
+        x: 50,
+        y: y - 5,
+        width: width - 100,
+        height: 18,
+        color: rgb(0.95, 0.95, 0.97),
+      });
+    }
+
+    rowData.forEach((text, i) => {
+      page.drawText(text, {
+        x: colX[i] + 4,
+        y: y,
+        size: 8,
+        font,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+    });
+
+    y -= 20;
+  });
+
+  const pdfBytes = await pdfDoc.save();
+  const base64 = Buffer.from(pdfBytes).toString("base64");
+  return `data:application/pdf;base64,${base64}`;
 }

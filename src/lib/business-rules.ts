@@ -125,3 +125,31 @@ export function parseLatLong(latLong: string): { lat: number; lon: number } | nu
   if (!match) return null;
   return { lat: parseFloat(match[1]), lon: parseFloat(match[2]) };
 }
+
+export function calculateOTHours(
+  checkOutTime: string,
+  groupType: GroupType
+): number {
+  const rule = BUSINESS_RULES[groupType];
+  if (!rule.otStart || !rule.otEnd) return 0;
+
+  const [otStartH, otStartM] = rule.otStart.split(":").map(Number);
+  const [otEndH, otEndM] = rule.otEnd.split(":").map(Number);
+  const [coH, coM] = checkOutTime.split(":").map(Number);
+
+  const checkOutMinutes = coH * 60 + coM;
+  const otStartMinutes = otStartH * 60 + otStartM;
+  const otEndMinutes = otEndH * 60 + otEndM;
+
+  if (checkOutMinutes <= otStartMinutes) return 0;
+  if (checkOutMinutes >= otEndMinutes) {
+    return (otEndMinutes - otStartMinutes) / 60;
+  }
+  return (checkOutMinutes - otStartMinutes) / 60;
+}
+
+export function isWeekend(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  return day === 0 || day === 6;
+}
