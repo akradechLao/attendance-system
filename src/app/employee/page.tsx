@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { checkIn, checkOut, getAllEmployees, getTodayAttendance } from "@/lib/actions";
 import { useGeolocation } from "@/hooks/useGeolocation";
 
@@ -29,6 +30,7 @@ interface AttendanceRecord {
 }
 
 export default function EmployeePortal() {
+  const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmpId, setSelectedEmpId] = useState<number | null>(null);
   const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([]);
@@ -235,6 +237,18 @@ export default function EmployeePortal() {
               {loading ? "กำลังดำเนินการ..." : "เช็คออก"}
             </button>
           </div>
+
+          {selectedEmpId && (
+            <button
+              onClick={() => router.push(`/employee/history/${selectedEmpId}`)}
+              className="mt-3 w-full rounded-lg border border-cream-dark bg-cream/50 px-4 py-2.5 text-sm font-medium text-navy/70 hover:bg-cream transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              ดูประวัติย้อนหลังเดือนนี้
+            </button>
+          )}
 
           {message && (
             <div

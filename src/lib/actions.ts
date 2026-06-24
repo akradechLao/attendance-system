@@ -930,7 +930,6 @@ export async function generateAttendanceReportPdf(
 
     const headers = ["No.", "Name", "Group", "Late", "Absent", "Leave", "WFH", "Work Days"];
     const colX = [50, 80, 230, 310, 360, 410, 460, 520];
-    const colW = [30, 150, 80, 50, 50, 50, 60, 80];
 
     page.drawRectangle({
       x: 50, y: y - 5, width: PAGE_WIDTH - 100, height: HEADER_HEIGHT,
@@ -1278,4 +1277,138 @@ export async function getOnboardingStats() {
   const onHold = records.filter((r) => r.status === "on_hold").length;
 
   return { total, inProgress, completed, onHold };
+}
+
+// ===== EMPLOYEE MONTHLY STATS =====
+
+export interface EmployeeMonthlyStats {
+  employee: { id: number; name: string; groupType: string };
+  month: string;
+  totalDays: number;
+  lateDays: number;
+  onTimeDays: number;
+  absentDays: number;
+  leaveDays: number;
+  wfhDays: number;
+  workDays: number;
+  leaveDetails: Record<string, number>;
+  history: {
+    date: string;
+    dayName: string;
+    checkIn: string | null;
+    checkOut: string | null;
+    status: string;
+    workHours: number | null;
+    checkInPhoto: string | null;
+    checkOutPhoto: string | null;
+  }[];
+}
+
+export async function getEmployeeMonthlyStats(empId: number, year: number, month: number): Promise<EmployeeMonthlyStats | null> {
+  const employee = await prisma.employee.findUnique({ where: { id: empId } });
+  if (!employee) return null;
+
+  const monthStr = String(month).padStart(2, "0");
+  const startDate = `${year}-${monthStr}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
+
+  const allDates: string[] = [];
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+  while (current <= end) {
+    const day = current.getDay();
+    if (day !== 0) {
+      allDates.push(
+        `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`
+      );
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  const [attendance, leaves, wfhRecords] = await Promise.all([
+    prisma.attendanceLog.findMany({
+      where: { empId, date: { gte: startDate, lte: endDate } },
+      orderBy: { date: "asc" },
+    }),
+    prisma.leaveRequest.findMany({
+      where: {
+        empId,
+        status: { not: "rejected" },
+        OR: [{ startDate: { lte: endDate }, endDate: { gte: startDate } }],
+      },
+    }),
+    prisma.wfhRecord.findMany({
+      where: {
+        empId,
+        date: { gte: startDate, lte: endDate },
+        status: { not: "rejected" },
+      },
+    }),
+  ]);
+
+  const lateDays = attendance.filter((a) => a.status === "late").length;
+  const onTimeDays = attendance.filter((a) => a.status === "on_time").length;
+  const wfhDates = new Set(wfhRecords.map((w) => w.date));
+  const wfhDays = wfhRecords.length;
+
+  const leaveDetails: Record<string, number> = {};
+  let leaveDays = 0;
+  for (const l of leaves) {
+    const lStart = new Date(Math.max(new Date(l.startDate).getTime(), new Date(startDate).getTime()));
+    const lEnd = new Date(Math.min(new Date(l.endDate).getTime(), new Date(endDate).getTime()));
+    const days = Math.ceil((lEnd.getTime() - lStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (days > 0) {
+      leaveDays += days;
+      leaveDetails[l.leaveType] = (leaveDetails[l.leaveType] || 0) + days;
+    }
+  }
+
+  const attendedDates = new Set(attendance.map((a) => a.date));
+  const absentDays = allDates.filter(
+    (d) => !attendedDates.has(d) && !wfhDates.has(d) && !leaves.some((l) => l.startDate <= d && l.endDate >= d)
+  ).length;
+
+  const history = allDates.map((date) => {
+    const att = attendance.find((a) => a.date === date);
+    const d = new Date(date + "T00:00:00");
+    const dayNames = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+    const dayName = dayNames[d.getDay()];
+
+    let status: string;
+    if (att) {
+      status = att.status === "late" ? "สาย" : "ตรงเวลา";
+    } else if (wfhDates.has(date)) {
+      status = "WFH";
+    } else if (leaves.some((l) => l.startDate <= date && l.endDate >= date)) {
+      status = "ลา";
+    } else {
+      status = "ขาด";
+    }
+
+    return {
+      date,
+      dayName,
+      checkIn: att?.checkIn || null,
+      checkOut: att?.checkOut || null,
+      status,
+      workHours: att?.checkIn && att?.checkOut ? Math.round(calcWorkHours(att.checkIn, att.checkOut) * 100) / 100 : null,
+      checkInPhoto: att?.checkInPhoto || null,
+      checkOutPhoto: att?.checkOutPhoto || null,
+    };
+  });
+
+  return {
+    employee: { id: employee.id, name: employee.name, groupType: employee.groupType },
+    month: `${year}-${monthStr}`,
+    totalDays: allDates.length,
+    lateDays,
+    onTimeDays,
+    absentDays,
+    leaveDays,
+    wfhDays,
+    workDays: lateDays + onTimeDays + wfhDays,
+    leaveDetails,
+    history,
+  };
 }
