@@ -16,6 +16,14 @@ const employees = [
 async function main() {
   console.log("Seeding database...");
 
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE attendance_logs ALTER COLUMN check_in_photo TYPE TEXT`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE attendance_logs ALTER COLUMN check_out_photo TYPE TEXT`
+  );
+  console.log("Photo columns ensured to be TEXT type.");
+
   const adminUser = await prisma.adminUser.findFirst();
   if (!adminUser) {
     await prisma.adminUser.create({
