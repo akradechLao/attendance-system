@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push && prisma generate && next build",
+    "build": "prisma db push && prisma generate && node --import tsx prisma/seed.mts && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
