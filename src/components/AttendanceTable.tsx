@@ -63,13 +63,13 @@ export default function AttendanceTable({
               <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-navy/70">
                 ภาพออก
               </th>
-              <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-navy/70">
+              <th className="hidden sm:table-cell whitespace-nowrap px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-navy/70">
                 ชั่วโมงทำงาน
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-navy/70">
                 สถานะ
               </th>
-              <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-navy/70">
+              <th className="hidden md:table-cell whitespace-nowrap px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-navy/70">
                 GPS
               </th>
             </tr>
@@ -126,7 +126,7 @@ export default function AttendanceTable({
                       <span className="text-navy/30">-</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gold-dark">
+                  <td className="hidden sm:table-cell whitespace-nowrap px-6 py-4 text-sm font-medium text-gold-dark">
                     {calcWorkHours(record.checkIn, record.checkOut)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
@@ -142,7 +142,7 @@ export default function AttendanceTable({
                       {record.status === "late" ? "สาย" : record.status === "on_time" ? "ตรงเวลา" : "-"}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-navy/50">
+                  <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-sm text-navy/50">
                     {record.latLong ? (
                       <span className="max-w-[120px] truncate block" title={record.latLong}>
                         {record.latLong}

@@ -141,9 +141,14 @@ export default function EmployeePortal() {
     const finalLatLong = latLong || "GPS not available";
 
     let photoUrl: string | undefined;
+    let photoFailed = false;
     if (capturedPhoto) {
       const uploaded = await uploadPhoto(capturedPhoto, confirmAction, selectedEmpId);
-      if (uploaded) photoUrl = uploaded;
+      if (uploaded) {
+        photoUrl = uploaded;
+      } else {
+        photoFailed = true;
+      }
     }
 
     stopCamera();
@@ -153,7 +158,8 @@ export default function EmployeePortal() {
       ? await checkIn(selectedEmpId, finalLatLong, photoUrl)
       : await checkOut(selectedEmpId, finalLatLong, photoUrl);
 
-    setMessage({ type: result.success ? "success" : "error", text: result.message });
+    const warningText = photoFailed ? " (รูปถ่ายไม่สำเร็จ)" : "";
+    setMessage({ type: result.success ? "success" : "error", text: result.message + warningText });
     if (result.distanceInfo) setDistanceInfo(result.distanceInfo);
     setLoading(false);
 

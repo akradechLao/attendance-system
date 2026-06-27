@@ -169,7 +169,7 @@ export default function EmployeeHistoryPage({ params }: { params: Promise<{ empI
             </div>
           )}
 
-          <div className="rounded-xl border border-cream-dark bg-white shadow-gold overflow-hidden">
+          <div className="rounded-xl border border-cream-dark bg-white shadow-gold overflow-hidden max-w-full">
             <div className="gradient-navy px-6 py-4">
               <h2 className="text-base font-semibold text-white">
                 ประวัติเดือน {new Date(year, month - 1).toLocaleDateString("th-TH", { month: "long", year: "numeric" })}

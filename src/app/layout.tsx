@@ -57,7 +57,7 @@ export default function RootLayout({
       <body className="min-h-full bg-cream">
         <PwaRegistration />
         <Sidebar />
-        <main className="ml-0 min-h-screen p-4 pt-20 lg:ml-60 lg:p-6 lg:pt-6">
+        <main className="ml-0 min-h-screen p-4 pt-20 overflow-hidden lg:ml-60 lg:p-6 lg:pt-6">
           {children}
         </main>
       </body>
