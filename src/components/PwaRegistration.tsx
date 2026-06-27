@@ -47,8 +47,8 @@ export default function PwaRegistration() {
 
   const handleInstall = async () => {
     if (deferredPrompt) {
-      (deferredPrompt as { prompt: () => void }).prompt();
-      const { outcome } = await (deferredPrompt as { prompt: () => Promise<{ outcome: string }> }).prompt();
+      const ep = deferredPrompt as unknown as { prompt: () => Promise<{ outcome: string }> };
+      const { outcome } = await ep.prompt();
       if (outcome === "accepted") {
         setShowInstall(false);
       }
