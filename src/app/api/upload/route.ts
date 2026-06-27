@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     const compressed = await sharp(buffer)
-      .resize(640, 480, { fit: "inside", withoutEnlargement: true })
+      .resize(320, 240, { fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: 60 })
       .toBuffer();
 
