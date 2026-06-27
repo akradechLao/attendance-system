@@ -102,6 +102,16 @@ model WfhRecord {
   @@map("wfh_records")
 }
 
+model AdminUser {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_users")
+}
+
 model OfficeLocation {
   id          Int      @id @default(autoincrement())
   name        String

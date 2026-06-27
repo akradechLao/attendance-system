@@ -16,6 +16,14 @@ const employees = [
 async function main() {
   console.log("Seeding database...");
 
+  const adminUser = await prisma.adminUser.findFirst();
+  if (!adminUser) {
+    await prisma.adminUser.create({
+      data: { username: "admin", password: "1234" },
+    });
+    console.log("Default admin user created (username: admin, password: 1234)");
+  }
+
   for (let i = 0; i < employees.length; i++) {
     const emp = employees[i];
       await prisma.employee.upsert({

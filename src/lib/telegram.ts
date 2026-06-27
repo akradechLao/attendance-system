@@ -26,7 +26,7 @@ export async function sendTelegramMessage(message: string): Promise<boolean> {
 }
 
 export async function sendTelegramPhoto(
-  photoBase64: string,
+  photoSource: string,
   caption: string
 ): Promise<boolean> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
@@ -37,8 +37,16 @@ export async function sendTelegramPhoto(
   try {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
 
-    const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, "");
-    const buffer = Buffer.from(base64Data, "base64");
+    let buffer: Buffer;
+    if (photoSource.startsWith("data:image")) {
+      const base64Data = photoSource.replace(/^data:image\/\w+;base64,/, "");
+      buffer = Buffer.from(base64Data, "base64");
+    } else {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const filepath = path.join(process.cwd(), "public", photoSource);
+      buffer = await fs.readFile(filepath);
+    }
 
     const formData = new FormData();
     formData.append("chat_id", TELEGRAM_CHAT_ID);

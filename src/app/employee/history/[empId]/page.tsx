@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { getEmployeeMonthlyStats, getAllEmployees } from "@/lib/actions";
+import { getPhotoSrc } from "@/lib/photo-utils";
 import { LEAVE_TYPES } from "@/lib/leave-constants";
 
 interface Employee {
@@ -204,9 +205,9 @@ export default function EmployeeHistoryPage({ params }: { params: Promise<{ empI
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          {rec.checkInPhoto && (
+                           {rec.checkInPhoto && (
                             <button
-                              onClick={() => setSelectedPhoto(rec.checkInPhoto)}
+                              onClick={() => setSelectedPhoto(getPhotoSrc(rec.checkInPhoto))}
                               className="rounded bg-green-100 p-1 text-green-600 hover:bg-green-200 transition-colors"
                               title="ภาพเช็คอิน"
                             >
@@ -216,9 +217,9 @@ export default function EmployeeHistoryPage({ params }: { params: Promise<{ empI
                               </svg>
                             </button>
                           )}
-                          {rec.checkOutPhoto && (
+                           {rec.checkOutPhoto && (
                             <button
-                              onClick={() => setSelectedPhoto(rec.checkOutPhoto)}
+                              onClick={() => setSelectedPhoto(getPhotoSrc(rec.checkOutPhoto))}
                               className="rounded bg-navy/10 p-1 text-navy hover:bg-navy/20 transition-colors"
                               title="ภาพเช็คออก"
                             >

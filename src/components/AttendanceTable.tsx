@@ -1,3 +1,5 @@
+import { getPhotoSrc } from "@/lib/photo-utils";
+
 interface AttendanceRecord {
   id: number;
   checkIn: string | null;
@@ -102,7 +104,7 @@ export default function AttendanceTable({
                   <td className="whitespace-nowrap px-6 py-4">
                     {record.checkInPhoto ? (
                       <img
-                        src={record.checkInPhoto}
+                        src={getPhotoSrc(record.checkInPhoto)}
                         alt="Check-in"
                         className="h-10 w-10 rounded-lg object-cover border border-cream-dark"
                       />
@@ -116,7 +118,7 @@ export default function AttendanceTable({
                   <td className="whitespace-nowrap px-6 py-4">
                     {record.checkOutPhoto ? (
                       <img
-                        src={record.checkOutPhoto}
+                        src={getPhotoSrc(record.checkOutPhoto)}
                         alt="Check-out"
                         className="h-10 w-10 rounded-lg object-cover border border-cream-dark"
                       />

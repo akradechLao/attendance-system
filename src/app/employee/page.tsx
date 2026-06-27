@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { checkIn, checkOut, getAllEmployees, getTodayAttendance, getEmployeeWeeklyStats } from "@/lib/actions";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { getPhotoSrc } from "@/lib/photo-utils";
 
 interface Employee {
   id: number;
@@ -311,7 +312,7 @@ export default function EmployeePortal() {
                 <div className="border-b border-cream-dark py-2">
                   <span className="text-sm text-navy/50">ภาพเช็คอิน</span>
                   <img
-                    src={myTodayRecord.checkInPhoto}
+                    src={getPhotoSrc(myTodayRecord.checkInPhoto)}
                     alt="Check-in photo"
                     className="mt-2 h-24 w-32 rounded-lg object-cover border border-cream-dark"
                   />
@@ -325,7 +326,7 @@ export default function EmployeePortal() {
                 <div className="border-b border-cream-dark py-2">
                   <span className="text-sm text-navy/50">ภาพเช็คออก</span>
                   <img
-                    src={myTodayRecord.checkOutPhoto}
+                    src={getPhotoSrc(myTodayRecord.checkOutPhoto)}
                     alt="Check-out photo"
                     className="mt-2 h-24 w-32 rounded-lg object-cover border border-cream-dark"
                   />

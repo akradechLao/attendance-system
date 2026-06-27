@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getAttendanceWithPhotos, getAllEmployees } from "@/lib/actions";
+import { getPhotoSrc } from "@/lib/photo-utils";
 
 interface PhotoRecord {
   id: number;
@@ -149,10 +150,10 @@ export default function PhotoHistoryPage() {
                         เช็คอิน {rec.checkIn}
                       </p>
                       <img
-                        src={rec.checkInPhoto}
+                        src={getPhotoSrc(rec.checkInPhoto)}
                         alt="Check-in"
                         className="h-28 w-full cursor-pointer rounded-lg object-cover border border-cream-dark hover:ring-2 hover:ring-gold transition-all"
-                        onClick={() => setSelectedPhoto(rec.checkInPhoto)}
+                        onClick={() => setSelectedPhoto(getPhotoSrc(rec.checkInPhoto))}
                       />
                     </div>
                   ) : (
@@ -166,10 +167,10 @@ export default function PhotoHistoryPage() {
                         เช็คออก {rec.checkOut}
                       </p>
                       <img
-                        src={rec.checkOutPhoto}
+                        src={getPhotoSrc(rec.checkOutPhoto)}
                         alt="Check-out"
                         className="h-28 w-full cursor-pointer rounded-lg object-cover border border-cream-dark hover:ring-2 hover:ring-gold transition-all"
-                        onClick={() => setSelectedPhoto(rec.checkOutPhoto)}
+                        onClick={() => setSelectedPhoto(getPhotoSrc(rec.checkOutPhoto))}
                       />
                     </div>
                   ) : (

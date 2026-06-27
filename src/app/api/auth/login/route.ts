@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!verifyCredentials(username, password)) {
+    if (!await verifyCredentials(username, password)) {
       return NextResponse.json(
         { success: false, message: "Username หรือ Password ไม่ถูกต้อง" },
         { status: 401 }

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "admin_session";
 const SESSION_SECRET = "hr-attendance-admin-2024";
@@ -27,6 +28,9 @@ export async function clearAdminSession(): Promise<void> {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-export function verifyCredentials(username: string, password: string): boolean {
-  return username === "admin" && password === "1234";
+export async function verifyCredentials(username: string, password: string): Promise<boolean> {
+  const user = await prisma.adminUser.findFirst({
+    where: { username, password },
+  });
+  return user !== null;
 }

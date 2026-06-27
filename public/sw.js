@@ -1,9 +1,12 @@
-const CACHE_NAME = "hr-attendance-v1";
+const CACHE_VERSION = 2;
+const CACHE_NAME = `hr-attendance-v${CACHE_VERSION}`;
+const MAX_CACHE_SIZE = 50;
 const STATIC_ASSETS = [
   "/employee",
   "/login",
   "/",
   "/manifest.json",
+  "/offline.html",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
 ];
@@ -28,6 +31,12 @@ self.addEventListener("activate", (event) => {
     })
   );
   self.clients.claim();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {
@@ -59,9 +68,19 @@ self.addEventListener("fetch", (event) => {
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseToCache);
+          cache.keys().then((keys) => {
+            if (keys.length > MAX_CACHE_SIZE) {
+              cache.delete(keys[0]);
+            }
+          });
         });
 
         return response;
+      }).catch(() => {
+        if (event.request.mode === "navigate") {
+          return caches.match("/offline.html");
+        }
+        return new Response("", { status: 503 });
       });
     })
   );
