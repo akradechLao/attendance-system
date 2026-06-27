@@ -37,20 +37,16 @@ export async function sendTelegramPhoto(
   try {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
 
-    let buffer: Buffer;
-    if (photoSource.startsWith("data:image")) {
-      const base64Data = photoSource.replace(/^data:image\/\w+;base64,/, "");
-      buffer = Buffer.from(base64Data, "base64");
-    } else {
-      const fs = await import("fs/promises");
-      const path = await import("path");
-      const filepath = path.join(process.cwd(), "public", photoSource);
-      buffer = await fs.readFile(filepath);
+    const base64Data = photoSource.replace(/^data:image\/\w+;base64,/, "");
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
     }
 
     const formData = new FormData();
     formData.append("chat_id", TELEGRAM_CHAT_ID);
-    formData.append("photo", new Blob([buffer], { type: "image/jpeg" }), "photo.jpg");
+    formData.append("photo", new Blob([bytes], { type: "image/jpeg" }), "photo.jpg");
     formData.append("caption", caption);
     formData.append("parse_mode", "HTML");
 
