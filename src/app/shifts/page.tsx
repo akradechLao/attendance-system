@@ -57,7 +57,7 @@ export default function ShiftManagement() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [autoBooking, setAutoBooking] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ empId: number; date: string; x: number; y: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ empId: number; date: string; x: number; y: number; groupType: string } | null>(null);
 
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
@@ -117,12 +117,12 @@ export default function ShiftManagement() {
     }
   };
 
-  const handleCellRightClick = (e: React.MouseEvent, empId: number, date: string) => {
+  const handleCellRightClick = (e: React.MouseEvent, empId: number, date: string, groupType: string) => {
     e.preventDefault();
     const d = new Date(date);
     const dayOfWeek = d.getDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
-      setContextMenu({ empId, date, x: e.clientX, y: e.clientY });
+      setContextMenu({ empId, date, x: e.clientX, y: e.clientY, groupType });
     }
   };
 
@@ -278,7 +278,7 @@ export default function ShiftManagement() {
                       <td
                         key={d}
                         className={`px-2 py-3 text-center ${isWeekendDay ? "bg-orange-50/30" : ""}`}
-                        onContextMenu={(e) => handleCellRightClick(e, emp.id, d)}
+                        onContextMenu={(e) => handleCellRightClick(e, emp.id, d, emp.groupType)}
                       >
                         {shift ? (
                           <span
@@ -301,10 +301,7 @@ export default function ShiftManagement() {
         </div>
       </div>
 
-      {contextMenu && (() => {
-        const dayOfWeek = new Date(contextMenu.date).getDay();
-        const isSaturday = dayOfWeek === 6;
-        return (
+      {contextMenu && (
         <div
           className="fixed z-50 rounded-xl border border-cream-dark bg-white shadow-navy p-2 min-w-[160px]"
           style={{ top: contextMenu.y, left: contextMenu.x }}
@@ -312,13 +309,15 @@ export default function ShiftManagement() {
           <p className="px-3 py-1 text-xs text-navy/50 font-medium">
             {formatDisplayDate(contextMenu.date)}
           </p>
-          <button
-            onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "ot")}
-            className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-purple-50 transition-colors"
-          >
-            เข้างาน + OT
-          </button>
-          {isSaturday && (
+          {contextMenu.groupType === "B" && (
+            <button
+              onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "ot")}
+              className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-purple-50 transition-colors"
+            >
+              เข้างาน + OT
+            </button>
+          )}
+          {new Date(contextMenu.date).getDay() === 6 && (
             <button
               onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "wfh")}
               className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-orange-50 transition-colors"
@@ -346,8 +345,7 @@ export default function ShiftManagement() {
             ลบ
           </button>
         </div>
-        );
-      })()}
+      )}
     </div>
   );
 }
