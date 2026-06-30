@@ -311,7 +311,7 @@ export default function ShiftManagement() {
           </p>
           <button
             onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "ot")}
-            className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-blue-50 transition-colors"
+            className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-purple-50 transition-colors"
           >
             เข้างาน + OT
           </button>
@@ -320,6 +320,12 @@ export default function ShiftManagement() {
             className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-orange-50 transition-colors"
           >
             WFH
+          </button>
+          <button
+            onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "normal")}
+            className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-green-50 transition-colors"
+          >
+            เข้างาน
           </button>
           <button
             onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "holiday")}
