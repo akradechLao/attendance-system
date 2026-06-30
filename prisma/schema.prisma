@@ -22,6 +22,8 @@ enum ShiftType {
   ot
   saturday
   sunday
+  wfh
+  holiday
 }
 
 model Employee {
