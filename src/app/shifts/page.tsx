@@ -24,7 +24,10 @@ function getWeekStart(date: Date): Date {
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatDisplayDate(dateStr: string): string {
@@ -111,9 +114,13 @@ export default function ShiftManagement() {
         body: JSON.stringify({ action: "toggle-weekend", empId, workDate, shiftType }),
       });
       const result = await res.json();
-      if (result.success) fetchSchedule();
+      if (result.success) {
+        fetchSchedule();
+      } else {
+        setMessage({ type: "error", text: result.message || "เกิดข้อผิดพลาด" });
+      }
     } catch {
-      console.error("Toggle weekend error");
+      setMessage({ type: "error", text: "เกิดข้อผิดพลาดในการเชื่อมต่อ" });
     }
   };
 
