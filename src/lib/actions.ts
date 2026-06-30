@@ -334,7 +334,6 @@ export async function createEmployee(
   preferredOffDay: string | null
 ) {
   try {
-    console.log("createEmployee called:", { name, groupType, preferredOffDay });
     await prisma.employee.create({
       data: { name, groupType, wfhQuota: 1, preferredOffDay },
     });
@@ -354,7 +353,6 @@ export async function updateEmployee(
   preferredOffDay: string | null
 ) {
   try {
-    console.log("updateEmployee called:", { id, name, groupType, preferredOffDay });
     await prisma.employee.update({
       where: { id },
       data: { name, groupType, wfhQuota: 1, preferredOffDay },
