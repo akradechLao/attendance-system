@@ -1,0 +1,49 @@
+{
+  "name": "attendance-system",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "prebuild": "node --import tsx scripts/cleanup-db.mts",
+"build": "node --import tsx scripts/cleanup-db.mts && prisma db push --accept-data-loss && prisma generate && node --import tsx prisma/seed.mts && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node --import tsx prisma/seed.mts",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset"
+  },
+  "dependencies": {
+    "@fontsource/sarabun": "^5.2.8",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "date-fns": "^4.4.0",
+    "leaflet": "^1.9.4",
+    "next": "16.2.9",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.22.0",
+    "prisma": "^7.8.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-leaflet": "^5.0.0",
+    "sharp": "^0.35.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^20",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "canvas": "^3.2.3",
+    "dotenv": "^17.4.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.4",
+    "typescript": "^5"
+  }
+}
