@@ -3,12 +3,12 @@ import { PrismaClient } from "../src/generated/prisma/client.js";
 const prisma = new PrismaClient();
 
 const employees = [
-  { name: "สมชาย ใจดี", groupType: "A", wfhQuota: 2, preferredOffDay: null },
+  { name: "สมชาย ใจดี", groupType: "A", wfhQuota: 1, preferredOffDay: null },
   { name: "สมหญิง รักงาน", groupType: "B", wfhQuota: 1, preferredOffDay: "Saturday" },
-  { name: "วิชัย เก่งมาก", groupType: "A", wfhQuota: 0, preferredOffDay: null },
-  { name: "สุภาพร สดใส", groupType: "B", wfhQuota: 3, preferredOffDay: "Sunday" },
+  { name: "วิชัย เก่งมาก", groupType: "A", wfhQuota: 1, preferredOffDay: null },
+  { name: "สุภาพร สดใส", groupType: "B", wfhQuota: 1, preferredOffDay: "Sunday" },
   { name: "นิพนธ์ มั่นคง", groupType: "A", wfhQuota: 1, preferredOffDay: null },
-  { name: "กานดา สวยงาม", groupType: "B", wfhQuota: 2, preferredOffDay: "Saturday" },
+  { name: "กานดา สวยงาม", groupType: "B", wfhQuota: 1, preferredOffDay: "Saturday" },
 ];
 
 async function main() {

@@ -331,12 +331,11 @@ export async function addShift(
 export async function createEmployee(
   name: string,
   groupType: "A" | "B",
-  wfhQuota: number,
   preferredOffDay: string | null
 ) {
   try {
     await prisma.employee.create({
-      data: { name, groupType, wfhQuota, preferredOffDay },
+      data: { name, groupType, wfhQuota: 1, preferredOffDay },
     });
     revalidatePath("/employees");
     revalidatePath("/");
@@ -350,13 +349,12 @@ export async function updateEmployee(
   id: number,
   name: string,
   groupType: "A" | "B",
-  wfhQuota: number,
   preferredOffDay: string | null
 ) {
   try {
     await prisma.employee.update({
       where: { id },
-      data: { name, groupType, wfhQuota, preferredOffDay },
+      data: { name, groupType, wfhQuota: 1, preferredOffDay },
     });
     revalidatePath("/employees");
     revalidatePath("/");

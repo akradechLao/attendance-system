@@ -27,7 +27,7 @@ interface EmployeeForm {
 const emptyForm: EmployeeForm = {
   name: "",
   groupType: "A",
-  wfhQuota: 0,
+  wfhQuota: 1,
   preferredOffDay: "",
 };
 
@@ -95,9 +95,9 @@ export default function EmployeesPage() {
     let result;
 
     if (editId) {
-      result = await updateEmployee(editId, form.name.trim(), form.groupType, form.wfhQuota, preferredOffDay);
+      result = await updateEmployee(editId, form.name.trim(), form.groupType, preferredOffDay);
     } else {
-      result = await createEmployee(form.name.trim(), form.groupType, form.wfhQuota, preferredOffDay);
+      result = await createEmployee(form.name.trim(), form.groupType, preferredOffDay);
     }
 
     if (result.success) {
@@ -222,16 +222,10 @@ export default function EmployeesPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy/70">สิทธิ์ WFH (วัน/เดือน)</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={1}
-                  value={form.wfhQuota}
-                  onChange={(e) => setForm({ ...form, wfhQuota: Number(e.target.value) })}
-                  className="mt-1 w-full rounded-lg border border-cream-dark bg-cream/50 px-4 py-2.5 text-navy focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
-                />
-                <p className="mt-1 text-xs text-navy/40">สูงสุด 1 วัน/เดือน (วันเสาร์)</p>
+                <label className="block text-sm font-medium text-navy/70">สิทธิ์ WFH</label>
+                <div className="mt-1 w-full rounded-lg border border-cream-dark bg-cream/30 px-4 py-2.5 text-navy">
+                  1 วัน/เดือน (วันเสาร์)
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-navy/70">วันหยุดประจำ (ถ้ามี)</label>

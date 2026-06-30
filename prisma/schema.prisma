@@ -28,7 +28,7 @@ model Employee {
   id                Int       @id @default(autoincrement())
   name              String
   groupType         GroupType @map("group_type")
-  wfhQuota          Int       @default(0) @map("wfh_quota")
+  wfhQuota          Int       @default(1) @map("wfh_quota")
   preferredOffDay   String?   @map("preferred_off_day")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")

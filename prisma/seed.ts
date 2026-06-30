@@ -6,10 +6,10 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 const employees = [
-  { name: "ปิยะพงษ์ คงสิบ", groupType: "A" as const, wfhQuota: 2, preferredOffDay: null },
+  { name: "ปิยะพงษ์ คงสิบ", groupType: "A" as const, wfhQuota: 1, preferredOffDay: null },
   { name: "กฤษกร วุฒิ", groupType: "A" as const, wfhQuota: 1, preferredOffDay: "Saturday" },
-  { name: "จิรายุ เริงหาญ", groupType: "B" as const, wfhQuota: 0, preferredOffDay: null },
-  { name: "พีรภาส ไพรบึง", groupType: "B" as const, wfhQuota: 3, preferredOffDay: "Sunday" },
+  { name: "จิรายุ เริงหาญ", groupType: "B" as const, wfhQuota: 1, preferredOffDay: null },
+  { name: "พีรภาส ไพรบึง", groupType: "B" as const, wfhQuota: 1, preferredOffDay: "Sunday" },
   { name: "อัญชลี ทะพงษ์", groupType: "A" as const, wfhQuota: 1, preferredOffDay: null },
 ];
 
