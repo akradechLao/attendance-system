@@ -38,7 +38,7 @@ const shiftTypeLabels: Record<string, string> = {
   saturday: "เข้างาน",
   sunday: "เข้างาน",
   wfh: "WFH",
-  holiday: "หยุด",
+  holiday: "วันหยุด",
 };
 
 const shiftTypeColors: Record<string, string> = {
@@ -225,7 +225,7 @@ export default function ShiftManagement() {
               <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-300"></span> เข้างาน</div>
               <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-purple-100 border border-purple-300"></span> เข้างาน + OT</div>
               <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-orange-100 border border-orange-300"></span> WFH</div>
-              <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-gray-100 border border-gray-300"></span> หยุด</div>
+              <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-gray-100 border border-gray-300"></span> วันหยุด</div>
             </div>
           </div>
         </div>
@@ -301,7 +301,10 @@ export default function ShiftManagement() {
         </div>
       </div>
 
-      {contextMenu && (
+      {contextMenu && (() => {
+        const dayOfWeek = new Date(contextMenu.date).getDay();
+        const isSaturday = dayOfWeek === 6;
+        return (
         <div
           className="fixed z-50 rounded-xl border border-cream-dark bg-white shadow-navy p-2 min-w-[160px]"
           style={{ top: contextMenu.y, left: contextMenu.x }}
@@ -315,12 +318,14 @@ export default function ShiftManagement() {
           >
             เข้างาน + OT
           </button>
-          <button
-            onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "wfh")}
-            className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-orange-50 transition-colors"
-          >
-            WFH
-          </button>
+          {isSaturday && (
+            <button
+              onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "wfh")}
+              className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-orange-50 transition-colors"
+            >
+              WFH
+            </button>
+          )}
           <button
             onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "normal")}
             className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-green-50 transition-colors"
@@ -331,7 +336,7 @@ export default function ShiftManagement() {
             onClick={() => handleToggleWeekend(contextMenu.empId, contextMenu.date, "holiday")}
             className="w-full text-left rounded-lg px-3 py-2 text-sm text-navy hover:bg-gray-50 transition-colors"
           >
-            หยุด
+            วันหยุด
           </button>
           <hr className="my-1 border-cream-dark" />
           <button
@@ -341,7 +346,8 @@ export default function ShiftManagement() {
             ลบ
           </button>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
