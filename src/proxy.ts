@@ -5,9 +5,10 @@ export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isLoginPage = pathname === "/login";
   const isApiAuth = pathname.startsWith("/api/auth");
+  const isApiUpload = pathname === "/api/upload";
   const isEmployeePage = pathname.startsWith("/employee");
 
-  if (isApiAuth || isEmployeePage) {
+  if (isApiAuth || isApiUpload || isEmployeePage) {
     return NextResponse.next();
   }
 
