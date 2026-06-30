@@ -215,35 +215,40 @@ export default function WfhPage() {
       </div>
 
       <div className="rounded-xl border border-cream-dark bg-white shadow-gold overflow-hidden">
-        <div className="gradient-navy px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-base font-semibold text-white">ประวัติ WFH เดือน{monthName}</h2>
-          <div className="flex items-center gap-3">
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="rounded-lg border border-white/30 bg-white/20 px-3 py-1.5 text-sm text-white focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
-            >
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1} className="text-navy">
-                  {new Date(2024, i).toLocaleDateString("th-TH", { month: "long" })}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="rounded-lg border border-white/30 bg-white/20 px-3 py-1.5 text-sm text-white focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
-            >
-              {Array.from({ length: 5 }, (_, i) => {
-                const y = now.getFullYear() - 2 + i;
-                return (
-                  <option key={y} value={y} className="text-navy">
-                    {y + 543}
+        <div className="gradient-navy px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h2 className="text-base font-semibold text-white">ประวัติ WFH</h2>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-white/70">เดือน:</label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="rounded-lg border border-white/30 bg-white/90 px-3 py-1.5 text-sm text-navy focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(2024, i).toLocaleDateString("th-TH", { month: "long" })}
                   </option>
-                );
-              })}
-            </select>
+                ))}
+              </select>
+              <label className="text-xs text-white/70">ปี:</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="rounded-lg border border-white/30 bg-white/90 px-3 py-1.5 text-sm text-navy focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
+              >
+                {Array.from({ length: 5 }, (_, i) => {
+                  const y = now.getFullYear() - 2 + i;
+                  return (
+                    <option key={y} value={y}>
+                      {y + 543}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
           </div>
+          <p className="mt-1 text-sm text-white/70">{monthName}</p>
         </div>
         {loading ? (
           <div className="p-8 space-y-4 animate-pulse">
