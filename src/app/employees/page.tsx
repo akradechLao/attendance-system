@@ -1,13 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  getAllEmployees,
-  createEmployee,
-  updateEmployee,
-  deleteEmployee,
-  getWfhOfMonthBulk,
-} from "@/lib/actions";
 
 interface Employee {
   id: number;
@@ -20,14 +13,12 @@ interface Employee {
 interface EmployeeForm {
   name: string;
   groupType: "A" | "B";
-  wfhQuota: number;
   preferredOffDay: string;
 }
 
 const emptyForm: EmployeeForm = {
   name: "",
   groupType: "A",
-  wfhQuota: 1,
   preferredOffDay: "",
 };
 
@@ -38,18 +29,19 @@ export default function EmployeesPage() {
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [editId, setEditId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | null }>({ text: "", type: null });
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   async function loadData() {
     try {
       setLoading(true);
-      const [emps, usage] = await Promise.all([
-        getAllEmployees(),
-        getWfhOfMonthBulk(),
+      const [empsRes, usageRes] = await Promise.all([
+        fetch("/api/employees").then((r) => r.json()),
+        fetch("/api/attendance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "wfh-usage" }) }).then((r) => r.json()).catch(() => ({ data: {} })),
       ]);
-      setEmployees(emps);
-      setWfhUsage(usage);
+      if (empsRes.success) setEmployees(empsRes.data);
+      if (usageRes.data) setWfhUsage(usageRes.data);
     } catch (error) {
       console.error("Load error:", error);
       setMessage({ text: "ไม่สามารถโหลดข้อมูลได้", type: "error" });
@@ -77,7 +69,6 @@ export default function EmployeesPage() {
     setForm({
       name: emp.name,
       groupType: emp.groupType,
-      wfhQuota: emp.wfhQuota,
       preferredOffDay: emp.preferredOffDay || "",
     });
     setEditId(emp.id);
@@ -91,34 +82,51 @@ export default function EmployeesPage() {
       return;
     }
 
-    const preferredOffDay = form.preferredOffDay || null;
-    let result;
+    setSubmitting(true);
+    try {
+      const preferredOffDay = form.preferredOffDay || null;
+      const body = editId
+        ? { id: editId, name: form.name.trim(), groupType: form.groupType, preferredOffDay }
+        : { name: form.name.trim(), groupType: form.groupType, preferredOffDay };
 
-    if (editId) {
-      result = await updateEmployee(editId, form.name.trim(), form.groupType, preferredOffDay);
-    } else {
-      result = await createEmployee(form.name.trim(), form.groupType, preferredOffDay);
-    }
+      const res = await fetch("/api/employees", {
+        method: editId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const result = await res.json();
 
-    if (result.success) {
-      showMessage(result.message, "success");
-      setShowForm(false);
-      setForm(emptyForm);
-      setEditId(null);
-      loadData();
-    } else {
-      showMessage(result.message, "error");
+      if (result.success) {
+        showMessage(result.message, "success");
+        setShowForm(false);
+        setForm(emptyForm);
+        setEditId(null);
+        loadData();
+      } else {
+        showMessage(result.message || "เกิดข้อผิดพลาด", "error");
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      showMessage("เกิดข้อผิดพลาดในการบันทึก", "error");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function handleDelete(id: number) {
-    const result = await deleteEmployee(id);
-    if (result.success) {
-      showMessage(result.message, "success");
-      setDeleteConfirm(null);
-      loadData();
-    } else {
-      showMessage(result.message, "error");
+    try {
+      const res = await fetch(`/api/employees?id=${id}`, { method: "DELETE" });
+      const result = await res.json();
+      if (result.success) {
+        showMessage(result.message, "success");
+        setDeleteConfirm(null);
+        loadData();
+      } else {
+        showMessage(result.message || "เกิดข้อผิดพลาด", "error");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      showMessage("เกิดข้อผิดพลาดในการลบ", "error");
     }
   }
 
@@ -243,9 +251,10 @@ export default function EmployeesPage() {
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
-                className="rounded-lg gradient-navy px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md"
+                disabled={submitting}
+                className="rounded-lg gradient-navy px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {editId ? "บันทึกการแก้ไข" : "เพิ่มพนักงาน"}
+                {submitting ? "กำลังบันทึก..." : editId ? "บันทึกการแก้ไข" : "เพิ่มพนักงาน"}
               </button>
               <button
                 type="button"

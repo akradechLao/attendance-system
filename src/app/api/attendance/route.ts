@@ -56,3 +56,33 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    if (body.action === "wfh-usage") {
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const records = await prisma.wfhRecord.findMany({
+        where: {
+          date: { startsWith: month },
+          status: { not: "rejected" },
+        },
+        select: { empId: true },
+      });
+      const usage: Record<number, number> = {};
+      for (const r of records) {
+        usage[r.empId] = (usage[r.empId] || 0) + 1;
+      }
+      return NextResponse.json({ success: true, data: usage });
+    }
+
+    return NextResponse.json({ success: false, message: "Unknown action" }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
+}
