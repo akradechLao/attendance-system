@@ -105,7 +105,7 @@ export default function EmployeePortal() {
     ctx.drawImage(video, 0, 0);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    return canvas.toDataURL("image/jpeg", 0.8);
+    return canvas.toDataURL("image/jpeg", 0.6);
   }, []);
 
   const uploadPhoto = async (dataUrl: string, type: string, empId: number): Promise<string | null> => {
@@ -123,8 +123,10 @@ export default function EmployeePortal() {
       const data = await uploadRes.json();
 
       if (data.success) return data.imageUrl;
+      console.error("Upload failed:", data.error);
       return null;
-    } catch {
+    } catch (err) {
+      console.error("Upload error:", err);
       return null;
     }
   };

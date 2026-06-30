@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     const compressed = await sharp(buffer)
-      .resize(640, 480, { fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: 60 })
+      .resize(320, 240, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 50 })
       .toBuffer();
 
     const base64 = compressed.toString("base64");
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, imageUrl });
   } catch (error) {
+    console.error("Upload error:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
