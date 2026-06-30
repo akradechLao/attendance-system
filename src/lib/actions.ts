@@ -334,6 +334,7 @@ export async function createEmployee(
   preferredOffDay: string | null
 ) {
   try {
+    console.log("createEmployee called:", { name, groupType, preferredOffDay });
     await prisma.employee.create({
       data: { name, groupType, wfhQuota: 1, preferredOffDay },
     });
@@ -341,6 +342,7 @@ export async function createEmployee(
     revalidatePath("/");
     return { success: true, message: "เพิ่มพนักงานสำเร็จ" };
   } catch (error) {
+    console.error("createEmployee error:", error);
     return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
@@ -352,6 +354,7 @@ export async function updateEmployee(
   preferredOffDay: string | null
 ) {
   try {
+    console.log("updateEmployee called:", { id, name, groupType, preferredOffDay });
     await prisma.employee.update({
       where: { id },
       data: { name, groupType, wfhQuota: 1, preferredOffDay },
@@ -360,6 +363,7 @@ export async function updateEmployee(
     revalidatePath("/");
     return { success: true, message: "แก้ไขพนักงานสำเร็จ" };
   } catch (error) {
+    console.error("updateEmployee error:", error);
     return { success: false, message: `เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
