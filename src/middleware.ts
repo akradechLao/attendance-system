@@ -4,6 +4,10 @@ const SESSION_COOKIE = "admin_session";
 const SESSION_SECRET = "hr-attendance-admin-2024";
 
 export function middleware(request: NextRequest) {
+  if (request.headers.get("next-action")) {
+    return NextResponse.next();
+  }
+
   const session = request.cookies.get(SESSION_COOKIE);
   const isLoggedIn = session?.value === SESSION_SECRET;
 
