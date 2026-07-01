@@ -39,6 +39,7 @@ export default function EmployeePortal() {
   const [distanceInfo, setDistanceInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"checkin" | "checkout" | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -62,8 +63,12 @@ export default function EmployeePortal() {
       .then((data) => {
         setEmployees(data.employees);
         setTodayRecords(data.todayRecords);
+        setLoadError(null);
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("Failed to load employee data:", err);
+        setLoadError(err?.message || "ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+      })
       .finally(() => setLoadingData(false));
   }, []);
 
@@ -238,6 +243,31 @@ export default function EmployeePortal() {
               </option>
             ))}
           </select>
+
+          {loadError && (
+            <div className="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 border border-red-200">
+              <p className="font-medium">เกิดข้อผิดพลาด: {loadError}</p>
+              <button
+                onClick={() => {
+                  setLoadingData(true);
+                  setLoadError(null);
+                  getEmployeePortalData()
+                    .then((data) => {
+                      setEmployees(data.employees);
+                      setTodayRecords(data.todayRecords);
+                    })
+                    .catch((err) => {
+                      console.error("Failed to load employee data:", err);
+                      setLoadError(err?.message || "ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+                    })
+                    .finally(() => setLoadingData(false));
+                }}
+                className="mt-2 text-sm font-medium text-red-600 underline hover:text-red-800"
+              >
+                ลองใหม่
+              </button>
+            </div>
+          )}
 
           {selectedEmployee && (
             <div className="mt-4 rounded-lg gradient-gold-subtle p-4 border border-gold/20">
