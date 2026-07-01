@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { checkIn, checkOut, getAllEmployees, getTodayAttendance, getEmployeeWeeklyStats } from "@/lib/actions";
+import { checkIn, checkOut, getEmployeePortalData, getEmployeeWeeklyStats } from "@/lib/actions";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { getPhotoSrc } from "@/lib/photo-utils";
 
@@ -38,6 +38,7 @@ export default function EmployeePortal() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [distanceInfo, setDistanceInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [confirmAction, setConfirmAction] = useState<"checkin" | "checkout" | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -57,8 +58,13 @@ export default function EmployeePortal() {
   const { latitude, longitude, error: geoError, getLocation } = useGeolocation();
 
   useEffect(() => {
-    getAllEmployees().then(setEmployees).catch(() => {});
-    getTodayAttendance().then(setTodayRecords).catch(() => {});
+    getEmployeePortalData()
+      .then((data) => {
+        setEmployees(data.employees);
+        setTodayRecords(data.todayRecords);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingData(false));
   }, []);
 
   useEffect(() => {
@@ -166,7 +172,7 @@ export default function EmployeePortal() {
     setLoading(false);
 
     if (result.success) {
-      getTodayAttendance().then(setTodayRecords);
+      getEmployeePortalData().then((data) => setTodayRecords(data.todayRecords));
     }
   };
 
@@ -220,11 +226,12 @@ export default function EmployeePortal() {
         <div className="rounded-xl border border-cream-dark bg-white p-6 shadow-gold">
           <h2 className="mb-4 text-lg font-semibold text-navy">เลือกพนักงาน</h2>
           <select
-            className="w-full rounded-lg border border-cream-dark bg-cream/50 px-4 py-2.5 text-navy focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
+            className="w-full rounded-lg border border-cream-dark bg-cream/50 px-4 py-2.5 text-navy focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30 disabled:opacity-50"
             value={selectedEmpId || ""}
             onChange={(e) => setSelectedEmpId(Number(e.target.value) || null)}
+            disabled={loadingData}
           >
-            <option value="">-- เลือกพนักงาน --</option>
+            <option value="">{loadingData ? "กำลังโหลดรายชื่อ..." : "-- เลือกพนักงาน --"}</option>
             {employees.map((emp) => (
               <option key={emp.id} value={emp.id}>
                 {emp.name} (กลุ่ม {emp.groupType})
@@ -310,7 +317,16 @@ export default function EmployeePortal() {
 
         <div className="rounded-xl border border-cream-dark bg-white p-6 shadow-gold">
           <h2 className="mb-4 text-lg font-semibold text-navy">บันทึกวันนี้</h2>
-          {myTodayRecord ? (
+          {loadingData ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex justify-between border-b border-cream-dark py-2">
+                  <div className="h-4 w-20 rounded bg-cream animate-pulse" />
+                  <div className="h-4 w-24 rounded bg-cream animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : myTodayRecord ? (
             <div className="space-y-3">
               <div className="flex justify-between border-b border-cream-dark py-2">
                 <span className="text-sm text-navy/50">เข้างาน</span>

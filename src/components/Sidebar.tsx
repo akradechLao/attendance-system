@@ -40,7 +40,7 @@ export default function Sidebar() {
         setIsLoggedIn(false);
         setChecking(false);
       });
-  }, [pathname]);
+  }, []);
 
   const navItems = isLoggedIn ? adminNavItems : employeeNavItems;
 
@@ -58,7 +58,8 @@ export default function Sidebar() {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed top-4 left-4 z-50 rounded-lg gradient-navy p-2 text-white shadow-navy lg:hidden"
+        className="fixed left-4 z-50 rounded-lg gradient-navy p-2 text-white shadow-navy lg:hidden"
+        style={{ top: "calc(env(safe-area-inset-top, 20px) + 0.5rem)" }}
       >
         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {mobileOpen ? (
@@ -79,9 +80,10 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-screen w-60 flex-col gradient-navy shadow-navy transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-full w-60 flex-col gradient-navy shadow-navy transition-transform duration-300 lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
         <div className="flex h-16 items-center justify-center border-b border-white/10 flex-shrink-0">
           <div className="text-center">

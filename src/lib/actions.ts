@@ -264,6 +264,22 @@ export async function getAllEmployees() {
   });
 }
 
+export async function getEmployeePortalData() {
+  const now = getThaiTime();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+  const [employees, todayRecords] = await Promise.all([
+    prisma.employee.findMany({ orderBy: { id: "asc" } }),
+    prisma.attendanceLog.findMany({
+      where: { date: today },
+      include: { employee: true },
+      orderBy: { checkIn: "asc" },
+    }),
+  ]);
+
+  return { employees, todayRecords };
+}
+
 export async function getSundayMissingAfternoon() {
   if (!isTodaySunday()) return [];
 
